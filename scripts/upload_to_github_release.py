@@ -167,12 +167,12 @@ def main():
     release_data = get_or_create_release(token)
     release_id = release_data["id"]
 
-    # Collect files to upload
+    # Collect desktop packages only (excluding browser extensions)
     patterns = [
-        "*.deb",
-        "*.zip",
-        "*.tar.gz",
-        "*.xpi",
+        "aurora-kaushal-idm*.deb",
+        "aurora-kaushal-idm*windows*.zip",
+        "aurora-kaushal-idm*macos*.zip",
+        "aurora-kaushal-idm*.tar.gz",
         "SHA256SUMS.txt"
     ]
 
@@ -180,10 +180,14 @@ def main():
     for pattern in patterns:
         files_to_upload.extend(glob.glob(os.path.join(DIST_DIR, pattern)))
 
-    files_to_upload = sorted(list(set(files_to_upload)))
+    # Ensure no extension files are included
+    files_to_upload = [
+        f for f in sorted(list(set(files_to_upload)))
+        if not any(ext in os.path.basename(f) for ext in ["chrome", "brave", "edge", "firefox", "safari", ".xpi"])
+    ]
 
     if not files_to_upload:
-        print("❌ No files found in dist/ to upload.")
+        print("❌ No desktop application files found in dist/ to upload.")
         sys.exit(1)
 
     print(f"\nFound {len(files_to_upload)} release files in dist/:\n")

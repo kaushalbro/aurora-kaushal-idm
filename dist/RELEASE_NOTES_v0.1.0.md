@@ -16,17 +16,6 @@
 
 ---
 
-### 🌐 Universal Browser Extensions
-| Browser | Package | SHA-256 Checksum |
-| :--- | :--- | :--- |
-| **Google Chrome** | [`aurora-chrome-v0.1.0.zip`](aurora-chrome-v0.1.0.zip) | `dcb136ac2362f7ca68ea00c5006f16ded582434f1aa7c753c4f64345da1d1ddc` |
-| **Brave Browser** | [`aurora-brave-v0.1.0.zip`](aurora-brave-v0.1.0.zip) | `dcb136ac2362f7ca68ea00c5006f16ded582434f1aa7c753c4f64345da1d1ddc` |
-| **Microsoft Edge** | [`aurora-edge-v0.1.0.zip`](aurora-edge-v0.1.0.zip) | `dcb136ac2362f7ca68ea00c5006f16ded582434f1aa7c753c4f64345da1d1ddc` |
-| **Mozilla Firefox** | [`aurora-firefox-v0.1.0.xpi`](aurora-firefox-v0.1.0.xpi) | `392a702f75fade965a6b4e8ba0086990175c977e66e30089e9d262e023f8e3ff` |
-| **Apple Safari** | [`aurora-safari-v0.1.0.zip`](aurora-safari-v0.1.0.zip) | `a942b1872e7ea3da92cd455f197c0baa605b6a68a1d8cc58e71679949009249f` |
-
----
-
 ## ✨ Key Features & Capabilities
 
 - ⚡ **AURORA ECT Engine**: Adaptive dynamic work stealing splits straggler segments and accelerates downloads up to 32 concurrent TCP streams.

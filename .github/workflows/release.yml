@@ -70,10 +70,4 @@ jobs:
             dist/aurora-kaushal-idm-*-windows-x64.zip
             dist/aurora-kaushal-idm-*-linux-x86_64.tar.gz
             dist/aurora-kaushal-idm-*-macos.zip
-            dist/aurora-chrome-*.zip
-            dist/aurora-brave-*.zip
-            dist/aurora-edge-*.zip
-            dist/aurora-firefox-*.xpi
-            dist/aurora-firefox-*.zip
-            dist/aurora-safari-*.zip
             dist/SHA256SUMS.txt
