@@ -8,10 +8,10 @@ AURORA Kaushal IDM is a high-performance, next-generation download accelerator e
 
 | Operating System | Package | Size | SHA-256 Checksum |
 | :--- | :--- | :--- | :--- |
-| **Linux (Debian / Ubuntu)** | `aurora-kaushal-idm_0.1.0_amd64.deb` | **6.0 MB** | `32f99b95d7d2f4af994dd0d6f520f533ddb9a87d964b2955b1c94339fc6697ab` |
-| **Windows (10 / 11)** | `aurora-kaushal-idm-v0.1.0-windows-x64.zip` | **6.9 MB** | `338606bf8240793eaddb5c11c89bbc0b23ca1c69e8aaeba4950be6641f99d398` |
-| **Apple macOS (10.15+)** | `aurora-kaushal-idm-v0.1.0-macos.zip` | **8.0 MB** | `54cd88a7bae4438346f709fe3daeb397fe37fce6abbf443f74822e9a39bdbb5e` |
-| **Linux (Generic / Portable)** | `aurora-kaushal-idm-v0.1.0-linux-x86_64.tar.gz` | **8.0 MB** | `61d3b437a4b933472ee7a816109d2e7adda1562470f4558398b00317724833db` |
+| **Linux (Debian / Ubuntu)** | `aurora-kaushal-idm_0.1.0_amd64.deb` | **6.0 MB** | `b8bd641706d56b9a538fdecf79418647e027a94ef7a2ea70ef58d653187bcfbb` |
+| **Windows (10 / 11)** | `aurora-kaushal-idm-v0.1.0-windows-x64.zip` | **6.9 MB** | `341ec286ea18c8f4c9457e51b882c5497b25335e833a7f0dbbc700ef03ba075e` |
+| **Apple macOS (10.15+)** | `aurora-kaushal-idm-v0.1.0-macos.zip` | **16.0 MB** | `14454a415a4c2cb6ffb38b005e9b6eabee19ab91ee535b3488e4a435b7fc2138` |
+| **Linux (Generic / Portable)** | `aurora-kaushal-idm-v0.1.0-linux-x86_64.tar.gz` | **8.0 MB** | `b3bfbdcab2790be70bd3d27f9f248e98511474c3f4608260b9761eabca183724` |
 
 ---
 

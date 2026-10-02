@@ -4,7 +4,7 @@
 # Generates:
 #   1. Debian/Ubuntu Linux Package (.deb) with clean upgrade/uninstall hooks
 #   2. Linux Portable Archive (.tar.gz) with clean install/uninstall scripts
-#   3. Windows Release Package (.zip / .exe) with clean install/uninstall batch scripts
+#   3. Windows Release Package (.zip) with clean install/uninstall batch/vbs scripts
 #   4. macOS Application Bundle (.app / .zip) with clean install/uninstall scripts
 # ==============================================================================
 
@@ -28,7 +28,7 @@ echo " ⚡ AURORA Kaushal IDM - Multi-Platform Desktop Packager"
 echo "    Version: ${VERSION} | Target: .deb, .tar.gz, .exe, .app"
 echo "============================================================"
 
-# Ensure icons are generated
+# Ensure full icon suite is generated
 python3 "${SCRIPT_DIR}/generate_icons.py" > /dev/null 2>&1 || true
 
 # ------------------------------------------------------------------------------
@@ -49,32 +49,41 @@ rm -rf "${DEB_ROOT}"
 mkdir -p "${DEB_ROOT}/DEBIAN"
 mkdir -p "${DEB_ROOT}/usr/bin"
 mkdir -p "${DEB_ROOT}/usr/share/applications"
-mkdir -p "${DEB_ROOT}/usr/share/icons/hicolor/128x128/apps"
-mkdir -p "${DEB_ROOT}/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "${DEB_ROOT}/usr/share/pixmaps"
 mkdir -p "${DEB_ROOT}/usr/share/doc/${APP_NAME}"
 
 # Copy binary
 cp "${LINUX_BIN}" "${DEB_ROOT}/usr/bin/${BIN_NAME}"
 chmod 755 "${DEB_ROOT}/usr/bin/${BIN_NAME}"
 
-# Copy icons
-if [[ -f "${ROOT_DIR}/apps/aurora-extension/icons/icon-128.png" ]]; then
-  cp "${ROOT_DIR}/apps/aurora-extension/icons/icon-128.png" "${DEB_ROOT}/usr/share/icons/hicolor/128x128/apps/aurora-idm.png"
+# Copy icons to all standard hicolor dimensions and pixmaps
+for s in 16 24 32 48 64 128 256 512; do
+  mkdir -p "${DEB_ROOT}/usr/share/icons/hicolor/${s}x${s}/apps"
+  if [[ -f "${ROOT_DIR}/apps/aurora-gui/resources/icon-${s}.png" ]]; then
+    cp "${ROOT_DIR}/apps/aurora-gui/resources/icon-${s}.png" "${DEB_ROOT}/usr/share/icons/hicolor/${s}x${s}/apps/aurora-idm.png"
+  fi
+done
+
+if [[ -f "${ROOT_DIR}/apps/aurora-gui/resources/icon-128.png" ]]; then
+  cp "${ROOT_DIR}/apps/aurora-gui/resources/icon-128.png" "${DEB_ROOT}/usr/share/pixmaps/aurora-idm.png"
 fi
 
-# Create .desktop file
+# Create .desktop file (Concise name 'AURORA IDM' avoids ellipses truncation in docks/grids)
 cat << 'EOF' > "${DEB_ROOT}/usr/share/applications/aurora-idm.desktop"
 [Desktop Entry]
-Name=AURORA Kaushal IDM
-Comment=Next-Gen High-Speed Download Accelerator with Adaptive ECT
+Version=1.0
+Name=AURORA IDM
+GenericName=Internet Download Manager
+Comment=Ultra-High Performance Internet Download Manager built in Rust
 Exec=/usr/bin/aurora-gui %U
 Icon=aurora-idm
 Terminal=false
 Type=Application
 Categories=Network;FileTransfer;Utility;
 MimeType=x-scheme-handler/aurora;
-Keywords=download;manager;accelerator;idm;aurora;
+Keywords=download;manager;accelerator;idm;aurora;kaushal;
 StartupWMClass=aurora-gui
+StartupNotify=true
 EOF
 
 # DEBIAN/control
@@ -94,26 +103,45 @@ Description: AURORA Kaushal IDM - High-Speed Download Accelerator
  verification, and seamless browser extension synchronization.
 EOF
 
-# DEBIAN/preinst (Kills running instances and removes old residual files)
+# DEBIAN/preinst (Kills running instances and wipes stale legacy desktop launchers)
 cat << 'EOF' > "${DEB_ROOT}/DEBIAN/preinst"
 #!/bin/sh
 set -e
 killall -9 aurora-gui 2>/dev/null || true
+killall -9 aurora-desktop 2>/dev/null || true
+pkill -f aurora-gui 2>/dev/null || true
+pkill -f aurora-desktop 2>/dev/null || true
+
+# Clean up any legacy or duplicate desktop launchers
+rm -f /usr/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f /usr/share/applications/aurora-desktop.desktop 2>/dev/null || true
+rm -f /usr/local/share/applications/*aurora*.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
+rm -f /root/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f /root/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
 rm -rf /tmp/aurora* /var/tmp/aurora* 2>/dev/null || true
 exit 0
 EOF
 chmod 755 "${DEB_ROOT}/DEBIAN/preinst"
 
-# DEBIAN/postinst (Updates desktop and icon database)
+# DEBIAN/postinst (Updates desktop and icon database + clears user duplicate launchers)
 cat << 'EOF' > "${DEB_ROOT}/DEBIAN/postinst"
 #!/bin/sh
 set -e
 chmod 755 /usr/bin/aurora-gui
+
+# Ensure duplicate user launchers are removed
+rm -f /home/*/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
+rm -f /root/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f /root/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
+
 if which update-desktop-database >/dev/null 2>&1; then
-    update-desktop-database -q /usr/share/applications || true
+    update-desktop-database -q /usr/share/applications 2>/dev/null || true
 fi
 if which gtk-update-icon-cache >/dev/null 2>&1; then
-    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
 fi
 exit 0
 EOF
@@ -124,6 +152,9 @@ cat << 'EOF' > "${DEB_ROOT}/DEBIAN/prerm"
 #!/bin/sh
 set -e
 killall -9 aurora-gui 2>/dev/null || true
+killall -9 aurora-desktop 2>/dev/null || true
+pkill -f aurora-gui 2>/dev/null || true
+pkill -f aurora-desktop 2>/dev/null || true
 exit 0
 EOF
 chmod 755 "${DEB_ROOT}/DEBIAN/prerm"
@@ -134,15 +165,16 @@ cat << 'EOF' > "${DEB_ROOT}/DEBIAN/postrm"
 set -e
 if [ "$1" = "purge" ] || [ "$1" = "remove" ]; then
     rm -f /usr/share/applications/aurora-idm.desktop
-    rm -f /usr/share/icons/hicolor/128x128/apps/aurora-idm.png
+    rm -f /usr/share/pixmaps/aurora-idm.png
+    rm -f /usr/share/icons/hicolor/*/apps/aurora-idm.png
     rm -rf /usr/share/doc/aurora-kaushal-idm
     rm -rf /tmp/aurora* /var/tmp/aurora* 2>/dev/null || true
 fi
 if which update-desktop-database >/dev/null 2>&1; then
-    update-desktop-database -q /usr/share/applications || true
+    update-desktop-database -q /usr/share/applications 2>/dev/null || true
 fi
 if which gtk-update-icon-cache >/dev/null 2>&1; then
-    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
 fi
 exit 0
 EOF
@@ -161,36 +193,51 @@ rm -rf "${TAR_ROOT}"
 mkdir -p "${TAR_ROOT}"
 
 cp "${LINUX_BIN}" "${TAR_ROOT}/${BIN_NAME}"
-cp "${ROOT_DIR}/apps/aurora-extension/icons/icon-128.png" "${TAR_ROOT}/aurora-icon.png"
+cp "${ROOT_DIR}/apps/aurora-gui/resources/icon-128.png" "${TAR_ROOT}/aurora-icon.png"
 cp "${DEB_ROOT}/usr/share/applications/aurora-idm.desktop" "${TAR_ROOT}/aurora-idm.desktop"
 
 # Portable install script
 cat << 'EOF' > "${TAR_ROOT}/install.sh"
 #!/usr/bin/env bash
 set -e
-echo "Installing AURORA Kaushal IDM to ~/.local/bin..."
+echo "Installing AURORA IDM to ~/.local/bin..."
 killall -9 aurora-gui 2>/dev/null || true
+killall -9 aurora-desktop 2>/dev/null || true
+
+# Remove any old stale launchers
+rm -f ~/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f ~/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
+
 mkdir -p ~/.local/bin
 mkdir -p ~/.local/share/applications
 mkdir -p ~/.local/share/icons/hicolor/128x128/apps
+mkdir -p ~/.local/share/pixmaps
 
 cp aurora-gui ~/.local/bin/aurora-gui
 chmod +x ~/.local/bin/aurora-gui
 cp aurora-icon.png ~/.local/share/icons/hicolor/128x128/apps/aurora-idm.png
+cp aurora-icon.png ~/.local/share/pixmaps/aurora-idm.png
 
 cat << 'DESK' > ~/.local/share/applications/aurora-idm.desktop
 [Desktop Entry]
-Name=AURORA Kaushal IDM
-Comment=Next-Gen High-Speed Download Accelerator
+Version=1.0
+Name=AURORA IDM
+GenericName=Internet Download Manager
+Comment=Ultra-High Performance Internet Download Manager built in Rust
 Exec=aurora-gui %U
 Icon=aurora-idm
 Terminal=false
 Type=Application
-Categories=Network;FileTransfer;
+Categories=Network;FileTransfer;Utility;
+MimeType=x-scheme-handler/aurora;
+Keywords=download;manager;accelerator;idm;aurora;kaushal;
+StartupWMClass=aurora-gui
+StartupNotify=true
 DESK
 
-which update-desktop-database >/dev/null 2>&1 && update-desktop-database ~/.local/share/applications || true
-echo "✅ AURORA Kaushal IDM installed successfully!"
+which update-desktop-database >/dev/null 2>&1 && update-desktop-database ~/.local/share/applications 2>/dev/null || true
+which gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t -f ~/.local/share/icons/hicolor 2>/dev/null || true
+echo "✅ AURORA IDM installed successfully!"
 EOF
 chmod +x "${TAR_ROOT}/install.sh"
 
@@ -198,13 +245,18 @@ chmod +x "${TAR_ROOT}/install.sh"
 cat << 'EOF' > "${TAR_ROOT}/uninstall.sh"
 #!/usr/bin/env bash
 set -e
-echo "Uninstalling AURORA Kaushal IDM..."
+echo "Uninstalling AURORA IDM..."
 killall -9 aurora-gui 2>/dev/null || true
+killall -9 aurora-desktop 2>/dev/null || true
 rm -f ~/.local/bin/aurora-gui
 rm -f ~/.local/share/applications/aurora-idm.desktop
+rm -f ~/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f ~/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
 rm -f ~/.local/share/icons/hicolor/128x128/apps/aurora-idm.png
-which update-desktop-database >/dev/null 2>&1 && update-desktop-database ~/.local/share/applications || true
-echo "✅ AURORA Kaushal IDM completely removed."
+rm -f ~/.local/share/pixmaps/aurora-idm.png
+which update-desktop-database >/dev/null 2>&1 && update-desktop-database ~/.local/share/applications 2>/dev/null || true
+which gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t -f ~/.local/share/icons/hicolor 2>/dev/null || true
+echo "✅ AURORA IDM completely removed."
 EOF
 chmod +x "${TAR_ROOT}/uninstall.sh"
 
@@ -212,7 +264,7 @@ tar -czf "${DIST_DIR}/${APP_NAME}-v${VERSION}-linux-x86_64.tar.gz" -C "${PKG_DIR
 echo "✅ Generated: ${DIST_DIR}/${APP_NAME}-v${VERSION}-linux-x86_64.tar.gz"
 
 # ------------------------------------------------------------------------------
-# 3. Windows Native Release Package (.zip with aurora-gui.exe, install.bat, uninstall.bat)
+# 3. Windows Native Release Package (.zip with aurora-gui.exe, install.bat, setup.vbs, uninstall.bat)
 # ------------------------------------------------------------------------------
 echo -e "\n[3/4] Building Windows Standalone (.exe) Package..."
 WIN_BIN="${TARGET_DIR}/x86_64-pc-windows-gnu/release/${BIN_NAME}.exe"
@@ -225,12 +277,12 @@ if [[ -f "${WIN_BIN}" ]]; then
   cp "${WIN_BIN}" "${WIN_ROOT}/${BIN_NAME}.exe"
   x86_64-w64-mingw32-strip "${WIN_ROOT}/${BIN_NAME}.exe" 2>/dev/null || true
   cp "${ROOT_DIR}/apps/aurora-gui/resources/icon.ico" "${WIN_ROOT}/icon.ico"
-  cp "${ROOT_DIR}/apps/aurora-extension/icons/icon-128.png" "${WIN_ROOT}/icon.png"
+  cp "${ROOT_DIR}/apps/aurora-gui/resources/icon-128.png" "${WIN_ROOT}/icon.png"
 
   # Windows Clean One-Click Installer (.bat)
   cat << 'EOF' > "${WIN_ROOT}/install.bat"
 @echo off
-title AURORA Kaushal IDM Setup
+title AURORA IDM Setup
 set "INSTALL_DIR=%LOCALAPPDATA%\Programs\AuroraIDM"
 
 echo ========================================================
@@ -253,15 +305,15 @@ copy /y "%~dp0uninstall.bat" "%INSTALL_DIR%\" >nul
 echo [4/4] Creating Desktop and Start Menu shortcuts with icon...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ws = New-Object -ComObject WScript.Shell; " ^
-  "$desk = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AURORA Kaushal IDM.lnk'); " ^
+  "$desk = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AURORA IDM.lnk'); " ^
   "$s = $ws.CreateShortcut($desk); " ^
   "$s.TargetPath = '%INSTALL_DIR%\aurora-gui.exe'; " ^
   "$s.WorkingDirectory = '%INSTALL_DIR%'; " ^
   "$s.IconLocation = '%INSTALL_DIR%\icon.ico,0'; " ^
   "$s.Save(); " ^
-  "$startDir = [System.IO.Path]::Combine([Environment]::GetFolderPath('Programs'), 'AURORA Kaushal IDM'); " ^
+  "$startDir = [System.IO.Path]::Combine([Environment]::GetFolderPath('Programs'), 'AURORA IDM'); " ^
   "if (!(Test-Path $startDir)) { New-Item -ItemType Directory -Path $startDir | Out-Null }; " ^
-  "$s2 = $ws.CreateShortcut([System.IO.Path]::Combine($startDir, 'AURORA Kaushal IDM.lnk')); " ^
+  "$s2 = $ws.CreateShortcut([System.IO.Path]::Combine($startDir, 'AURORA IDM.lnk')); " ^
   "$s2.TargetPath = '%INSTALL_DIR%\aurora-gui.exe'; " ^
   "$s2.WorkingDirectory = '%INSTALL_DIR%'; " ^
   "$s2.IconLocation = '%INSTALL_DIR%\icon.ico,0'; " ^
@@ -269,7 +321,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 
 echo.
 echo ========================================================
-echo  SUCCESS: AURORA Kaushal IDM installed successfully!
+echo  SUCCESS: AURORA IDM installed successfully!
 echo  Launching application...
 echo ========================================================
 start "" "%INSTALL_DIR%\aurora-gui.exe"
@@ -289,11 +341,11 @@ EOF
   # Windows Clean Uninstaller
   cat << 'EOF' > "${WIN_ROOT}/uninstall.bat"
 @echo off
-title AURORA Kaushal IDM Uninstaller
+title AURORA IDM Uninstaller
 set "INSTALL_DIR=%LOCALAPPDATA%\Programs\AuroraIDM"
 
 echo ========================================================
-echo  AURORA Kaushal IDM - Uninstaller
+echo  AURORA IDM - Uninstaller
 echo ========================================================
 echo [1/2] Terminating running aurora-gui.exe instances...
 taskkill /F /IM aurora-gui.exe 2>nul
@@ -301,12 +353,14 @@ timeout /t 1 /nobreak >nul
 
 echo [2/2] Deleting application files, cache, and shortcuts...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
+del /f /q "%USERPROFILE%\Desktop\AURORA IDM.lnk" 2>nul
 del /f /q "%USERPROFILE%\Desktop\AURORA Kaushal IDM.lnk" 2>nul
+rmdir /s /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\AURORA IDM" 2>nul
 rmdir /s /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\AURORA Kaushal IDM" 2>nul
 
 echo.
 echo ========================================================
-echo  AURORA Kaushal IDM has been completely removed.
+echo  AURORA IDM has been completely removed.
 echo ========================================================
 pause
 EOF
@@ -321,14 +375,14 @@ fi
 # 4. macOS Application Bundle (.app / .zip)
 # ------------------------------------------------------------------------------
 echo -e "\n[4/4] Building macOS Application Bundle (.app)..."
-MAC_APP_DIR="${PKG_DIR}/macos/AURORA Kaushal IDM.app"
+MAC_APP_DIR="${PKG_DIR}/macos/AURORA IDM.app"
 rm -rf "${PKG_DIR}/macos"
 mkdir -p "${MAC_APP_DIR}/Contents/MacOS"
 mkdir -p "${MAC_APP_DIR}/Contents/Resources"
 
 cp "${LINUX_BIN}" "${MAC_APP_DIR}/Contents/MacOS/aurora-gui"
 chmod +x "${MAC_APP_DIR}/Contents/MacOS/aurora-gui"
-cp "${ROOT_DIR}/apps/aurora-extension/icons/icon-128.png" "${MAC_APP_DIR}/Contents/Resources/icon.png"
+cp "${ROOT_DIR}/apps/aurora-gui/resources/icon-128.png" "${MAC_APP_DIR}/Contents/Resources/icon.png"
 
 # Info.plist
 cat << EOF > "${MAC_APP_DIR}/Contents/Info.plist"
@@ -343,7 +397,7 @@ cat << EOF > "${MAC_APP_DIR}/Contents/Info.plist"
     <key>CFBundleIdentifier</key>
     <string>com.aurora.idm</string>
     <key>CFBundleName</key>
-    <string>AURORA Kaushal IDM</string>
+    <string>AURORA IDM</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -362,22 +416,22 @@ EOF
 cat << 'EOF' > "${PKG_DIR}/macos/install.sh"
 #!/usr/bin/env bash
 set -e
-echo "Installing AURORA Kaushal IDM to /Applications..."
+echo "Installing AURORA IDM to /Applications..."
 killall -9 aurora-gui 2>/dev/null || true
-rm -rf "/Applications/AURORA Kaushal IDM.app"
-cp -R "AURORA Kaushal IDM.app" "/Applications/"
-echo "✅ AURORA Kaushal IDM installed to /Applications!"
+rm -rf "/Applications/AURORA IDM.app" "/Applications/AURORA Kaushal IDM.app"
+cp -R "AURORA IDM.app" "/Applications/"
+echo "✅ AURORA IDM installed to /Applications!"
 EOF
 chmod +x "${PKG_DIR}/macos/install.sh"
 
 cat << 'EOF' > "${PKG_DIR}/macos/uninstall.sh"
 #!/usr/bin/env bash
 set -e
-echo "Uninstalling AURORA Kaushal IDM..."
+echo "Uninstalling AURORA IDM..."
 killall -9 aurora-gui 2>/dev/null || true
-rm -rf "/Applications/AURORA Kaushal IDM.app"
+rm -rf "/Applications/AURORA IDM.app" "/Applications/AURORA Kaushal IDM.app"
 rm -rf ~/Library/Application\ Support/aurora 2>/dev/null || true
-echo "✅ AURORA Kaushal IDM removed."
+echo "✅ AURORA IDM removed."
 EOF
 chmod +x "${PKG_DIR}/macos/uninstall.sh"
 

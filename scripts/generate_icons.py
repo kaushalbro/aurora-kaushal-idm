@@ -66,14 +66,35 @@ def render_icon(target_size):
     return final_img
 
 def main():
-    icons_dir = os.path.join(os.path.dirname(__file__), "..", "apps", "aurora-extension", "icons")
-    os.makedirs(icons_dir, exist_ok=True)
+    ext_icons_dir = os.path.join(os.path.dirname(__file__), "..", "apps", "aurora-extension", "icons")
+    gui_res_dir = os.path.join(os.path.dirname(__file__), "..", "apps", "aurora-gui", "resources")
+    os.makedirs(ext_icons_dir, exist_ok=True)
+    os.makedirs(gui_res_dir, exist_ok=True)
     
-    for size in [16, 32, 48, 128]:
+    images_for_ico = []
+    sizes = [16, 24, 32, 48, 64, 128, 256, 512]
+    
+    for size in sizes:
         icon = render_icon(size)
-        out_path = os.path.join(icons_dir, f"icon-{size}.png")
-        icon.save(out_path, "PNG")
-        print(f"Generated {out_path} ({size}x{size})")
+        out_ext = os.path.join(ext_icons_dir, f"icon-{size}.png")
+        icon.save(out_ext, "PNG")
+        
+        out_gui = os.path.join(gui_res_dir, f"icon-{size}.png")
+        icon.save(out_gui, "PNG")
+        
+        if size <= 256:
+            images_for_ico.append(icon)
+        print(f"Generated icon-{size}.png ({size}x{size})")
+
+    # Generate multi-layer Windows ICO
+    ico_path = os.path.join(gui_res_dir, "icon.ico")
+    images_for_ico[-1].save(
+        ico_path,
+        format="ICO",
+        sizes=[(img.width, img.height) for img in images_for_ico],
+        append_images=images_for_ico[:-1]
+    )
+    print(f"Generated multi-resolution Windows icon.ico ({ico_path})")
 
 if __name__ == "__main__":
     main()

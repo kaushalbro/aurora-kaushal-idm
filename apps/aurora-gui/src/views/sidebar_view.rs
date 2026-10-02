@@ -68,7 +68,7 @@ pub fn render_sidebar(
                             CategoryFilter::Downloading if count > 0 => (theme::COLOR_ACCENT_BLUE, Color32::WHITE),
                             CategoryFilter::Completed if count > 0 => (theme::COLOR_SUCCESS_GREEN_DIM, COLOR_SUCCESS_GREEN),
                             CategoryFilter::Error if count > 0 => (theme::COLOR_DANGER_RED_DIM, theme::COLOR_DANGER_RED),
-                            _ => (Color32::from_rgb(235, 235, 240), theme::COLOR_TEXT_SECONDARY),
+                            _ => (theme::COLOR_BG_CARD, theme::COLOR_TEXT_SECONDARY),
                         };
                         pill_badge(ui, &count.to_string(), badge_bg, badge_fg);
                     });
