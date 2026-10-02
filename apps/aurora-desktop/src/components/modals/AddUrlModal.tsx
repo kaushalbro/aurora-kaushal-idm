@@ -10,6 +10,7 @@ import { Globe, Zap, ShieldCheck, CheckCircle2, AlertTriangle, Loader2 } from 'l
 interface AddUrlModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialUrl?: string;
   onSubmit: (
     url: string,
     filename?: string,
@@ -24,10 +25,11 @@ interface AddUrlModalProps {
 export const AddUrlModal: React.FC<AddUrlModalProps> = ({
   isOpen,
   onClose,
+  initialUrl,
   onSubmit,
   onProbeUrl,
 }) => {
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(initialUrl || '');
   const [filename, setFilename] = useState('');
   const [connections, setConnections] = useState<number>(16);
   const [scheduler, setScheduler] = useState('aurora-ect');
@@ -40,6 +42,12 @@ export const AddUrlModal: React.FC<AddUrlModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const probeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (initialUrl && isOpen) {
+      setUrl(initialUrl);
+    }
+  }, [initialUrl, isOpen]);
 
   // Auto-probe URL when user stops typing
   useEffect(() => {

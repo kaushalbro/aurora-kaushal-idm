@@ -27,6 +27,7 @@ pub enum DesktopBridgeCommand {
         filename: Option<String>,
         connections: Option<usize>,
     },
+    FocusWindow,
 }
 
 #[derive(Serialize)]
@@ -87,6 +88,8 @@ pub async fn start_desktop_server(
         .route("/api/history", get(get_history_handler))
         .route("/api/history/sync", post(sync_history_handler))
         .route("/api/download", post(add_download_handler))
+        .route("/api/open-app", post(open_app_handler))
+        .route("/api/focus", post(open_app_handler))
         .layer(cors)
         .with_state(Arc::new(state));
 
@@ -165,3 +168,14 @@ async fn add_download_handler(
         })),
     }
 }
+
+async fn open_app_handler(
+    State(state): State<Arc<ServerState>>,
+) -> impl IntoResponse {
+    let _ = state.command_tx.send(DesktopBridgeCommand::FocusWindow).await;
+    (StatusCode::OK, Json(GenericResponse {
+        success: true,
+        message: "AURORA Desktop window focused".to_string(),
+    }))
+}
+

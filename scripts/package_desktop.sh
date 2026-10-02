@@ -367,8 +367,15 @@ EOF
 
   (cd "${WIN_ROOT}" && zip -9 -q -r "${DIST_DIR}/${APP_NAME}-v${VERSION}-windows-x64.zip" .)
   echo "✅ Generated: ${DIST_DIR}/${APP_NAME}-v${VERSION}-windows-x64.zip"
+
+  # Compile official Standalone NSIS .exe Setup Wizard
+  if which makensis >/dev/null 2>&1; then
+    echo "Compiling Standalone NSIS Windows Installer (.exe)..."
+    makensis "${SCRIPT_DIR}/installer.nsi" > /dev/null
+    echo "✅ Generated: ${DIST_DIR}/${APP_NAME}-v${VERSION}-setup.exe"
+  fi
 else
-  echo "⚠️ Windows binary not found yet, skipping Windows zip creation."
+  echo "⚠️ Windows binary not found yet, skipping Windows packaging."
 fi
 
 # ------------------------------------------------------------------------------

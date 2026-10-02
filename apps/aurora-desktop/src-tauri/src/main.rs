@@ -1,8 +1,8 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
+mod autostart;
 mod commands;
+mod single_instance;
 mod state;
+mod tray;
 
 use aurora_core::events::{create_event_bus, DownloadEvent, EventReceiver};
 use aurora_core::types::SegmentState;
@@ -198,10 +198,25 @@ fn main() {
         )
         .init();
 
+    let args: Vec<String> = std::env::args().collect();
+    let is_autostart_launch = args.iter().any(|a| a == "--autostart" || a == "--minimized");
+
+    // Single-instance check: if already running, forward args and exit
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    if rt.block_on(single_instance::send_to_existing_instance_if_running(&args)) {
+        tracing::info!("Sent download request to existing AURORA IDM instance. Exiting secondary process.");
+        return;
+    }
+
     let (event_tx, event_rx) = create_event_bus(4096);
     let shared_state: SharedAppState = Arc::new(Mutex::new(AppState::new(event_tx)));
 
     let state_for_setup = shared_state.clone();
+    let initial_args = args.clone();
 
     tauri::Builder::default()
         .manage(shared_state)
@@ -215,10 +230,40 @@ fn main() {
                 }
             }
 
+            // Setup System Tray
+            if let Err(e) = tray::setup_tray(app) {
+                tracing::warn!("Failed to setup System Tray: {}", e);
+            }
+
+            // Start single-instance IPC listener
+            single_instance::start_single_instance_listener(handle.clone());
+
+            // Handle initial launch arguments (e.g. if started via CLI with a URL)
+            let args_to_handle = initial_args.clone();
+            let handle_for_args = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(800)).await;
+                single_instance::handle_incoming_args(&handle_for_args, &args_to_handle);
+            });
+
+            // If started via autostart in background, hide initial window
+            if is_autostart_launch {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
             tauri::async_runtime::spawn(async move {
                 run_event_and_telemetry_loop(event_rx, state_for_setup, handle).await;
             });
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // Minimize to tray instead of terminating app
+                let _ = window.hide();
+                api.prevent_close();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_downloads,
@@ -236,6 +281,12 @@ fn main() {
             commands::open_file,
             commands::get_config,
             commands::update_config,
+            commands::get_autostart_status,
+            commands::set_autostart_status,
+            commands::pause_all_downloads,
+            commands::resume_all_downloads,
+            commands::show_main_window,
+            commands::hide_main_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AURORA Kaushal IDM desktop application");

@@ -4,13 +4,18 @@ import { DownloadItemDto, EngineConfigDto, ServerCapabilitiesDto, TelemetryPaylo
 // Check if running inside native Tauri environment
 const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
-export function useTauri() {
+export function useTauri(callbacks?: {
+  onExternalUrl?: (url: string) => void;
+  onOpenAddModal?: () => void;
+  onOpenSettingsModal?: () => void;
+}) {
   const [downloads, setDownloads] = useState<DownloadItemDto[]>([]);
   const [totalSpeedStr, setTotalSpeedStr] = useState<string>('0.00 MB/s');
   const [totalSpeedBps, setTotalSpeedBps] = useState<number>(0);
   const [activeTasks, setActiveTasks] = useState<number>(0);
   const [speedHistory, setSpeedHistory] = useState<number[]>(new Array(60).fill(0));
   const [config, setConfig] = useState<EngineConfigDto | null>(null);
+  const [autostartEnabled, setAutostartEnabled] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -36,12 +41,32 @@ export function useTauri() {
     }
   }, []);
 
+  // Command handlers for pause/resume all
+  const pauseAll = useCallback(async () => {
+    try {
+      await invokeTauri('pause_all_downloads');
+      showToast('⏸ Paused all active downloads');
+    } catch (e: any) {
+      showToast(`❌ Error pausing all: ${e?.toString() || e}`);
+    }
+  }, [invokeTauri, showToast]);
+
+  const resumeAll = useCallback(async () => {
+    try {
+      await invokeTauri('resume_all_downloads');
+      showToast('▶ Resumed all downloads');
+    } catch (e: any) {
+      showToast(`❌ Error resuming all: ${e?.toString() || e}`);
+    }
+  }, [invokeTauri, showToast]);
+
   // Subscribe to real-time events from Rust
   useEffect(() => {
-    let unlistenFn: (() => void) | null = null;
+    const unlistenFns: Array<() => void> = [];
 
     if (isTauri) {
       import('@tauri-apps/api/event').then(({ listen }) => {
+        // Telemetry updates
         listen<TelemetryPayload>('telemetry-update', (event) => {
           const payload = event.payload;
           setDownloads(payload.downloads);
@@ -49,16 +74,46 @@ export function useTauri() {
           setTotalSpeedBps(payload.total_speed_bps);
           setActiveTasks(payload.active_tasks);
           setSpeedHistory(payload.speed_history);
-        }).then((unlisten) => {
-          unlistenFn = unlisten;
-        });
+        }).then((unlisten) => unlistenFns.push(unlisten));
+
+        // Deep-link / CLI incoming URL (e.g. from browser or aurora:// protocol)
+        listen<{ url: string }>('external-download-url', (event) => {
+          if (event.payload?.url) {
+            showToast(`🔗 Incoming download: ${event.payload.url}`);
+            if (callbacks?.onExternalUrl) {
+              callbacks.onExternalUrl(event.payload.url);
+            }
+          }
+        }).then((unlisten) => unlistenFns.push(unlisten));
+
+        // Tray actions
+        listen('open-add-modal', () => {
+          if (callbacks?.onOpenAddModal) callbacks.onOpenAddModal();
+        }).then((unlisten) => unlistenFns.push(unlisten));
+
+        listen('open-settings-modal', () => {
+          if (callbacks?.onOpenSettingsModal) callbacks.onOpenSettingsModal();
+        }).then((unlisten) => unlistenFns.push(unlisten));
+
+        listen('tray-pause-all', () => {
+          pauseAll();
+        }).then((unlisten) => unlistenFns.push(unlisten));
+
+        listen('tray-resume-all', () => {
+          resumeAll();
+        }).then((unlisten) => unlistenFns.push(unlisten));
+
+        listen<boolean>('autostart-changed', (event) => {
+          setAutostartEnabled(event.payload);
+          showToast(event.payload ? '🚀 Auto-start on boot enabled' : 'Auto-start disabled');
+        }).then((unlisten) => unlistenFns.push(unlisten));
       });
     }
 
     return () => {
-      if (unlistenFn) unlistenFn();
+      unlistenFns.forEach((fn) => fn());
     };
-  }, []);
+  }, [callbacks, pauseAll, resumeAll, showToast]);
 
   // Initial load
   const loadInitialData = useCallback(async () => {
@@ -68,6 +123,8 @@ export function useTauri() {
         if (initialDownloads) setDownloads(initialDownloads);
         const cfg = await invokeTauri<EngineConfigDto>('get_config');
         if (cfg) setConfig(cfg);
+        const auto = await invokeTauri<boolean>('get_autostart_status');
+        if (typeof auto === 'boolean') setAutostartEnabled(auto);
       } catch (e) {
         console.error('Error fetching initial data:', e);
       }
@@ -239,6 +296,19 @@ export function useTauri() {
     [invokeTauri, showToast]
   );
 
+  const setAutostart = useCallback(
+    async (enable: boolean) => {
+      try {
+        const res = await invokeTauri<boolean>('set_autostart_status', { enabled: enable });
+        setAutostartEnabled(Boolean(res));
+        showToast(enable ? '🚀 Launch on system startup enabled' : 'Launch on system startup disabled');
+      } catch (e: any) {
+        showToast(`❌ Error setting autostart: ${e?.toString() || e}`);
+      }
+    },
+    [invokeTauri, showToast]
+  );
+
   const saveConfig = useCallback(
     async (newConfig: EngineConfigDto) => {
       try {
@@ -259,12 +329,15 @@ export function useTauri() {
     activeTasks,
     speedHistory,
     config,
+    autostartEnabled,
     toastMessage,
     showToast,
     addDownload,
     addBatchDownloads,
     pauseDownload,
     resumeDownload,
+    pauseAll,
+    resumeAll,
     cancelDownload,
     restartDownload,
     removeDownload,
@@ -273,6 +346,7 @@ export function useTauri() {
     verifyChecksum,
     openFolder,
     openFile,
+    setAutostart,
     saveConfig,
   };
 }

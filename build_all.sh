@@ -116,13 +116,14 @@ npm run tauri build -- --no-bundle
 
 echo -e "  ✅ Built Tauri Modern Desktop App: ${GREEN}${PROJECT_ROOT}/target/release/aurora-desktop${RESET}"
 
-# Install desktop icons & .desktop entry for Linux desktop/dock integration
+# Install desktop icons, .desktop entry, and x-scheme-handler protocol association
 if [ -d "$HOME/.local/share" ]; then
     mkdir -p "$HOME/.local/share/icons/hicolor/512x512/apps" \
              "$HOME/.local/share/icons/hicolor/256x256/apps" \
              "$HOME/.local/share/icons/hicolor/128x128/apps" \
              "$HOME/.local/share/icons/hicolor/32x32/apps" \
-             "$HOME/.local/share/applications"
+             "$HOME/.local/share/applications" \
+             "$HOME/.local/bin"
 
     cp "${PROJECT_ROOT}/apps/aurora-desktop/src-tauri/icons/icon.png" "$HOME/.local/share/icons/hicolor/512x512/apps/aurora-desktop.png" 2>/dev/null || true
     cp "${PROJECT_ROOT}/apps/aurora-desktop/src-tauri/icons/128x128@2x.png" "$HOME/.local/share/icons/hicolor/256x256/apps/aurora-desktop.png" 2>/dev/null || true
@@ -130,9 +131,34 @@ if [ -d "$HOME/.local/share" ]; then
     cp "${PROJECT_ROOT}/apps/aurora-desktop/src-tauri/icons/32x32.png" "$HOME/.local/share/icons/hicolor/32x32/apps/aurora-desktop.png" 2>/dev/null || true
     cp "${PROJECT_ROOT}/apps/aurora-desktop/src-tauri/icons/icon.png" "$HOME/.local/share/icons/aurora-desktop.png" 2>/dev/null || true
 
+    # Link binary to ~/.local/bin for global CLI access
+    ln -sf "${PROJECT_ROOT}/target/release/aurora-desktop" "$HOME/.local/bin/aurora-desktop" 2>/dev/null || true
+
+    # Create .desktop file with deep link protocol associations for browser interception
+    cat << EOF > "$HOME/.local/share/applications/aurora-desktop.desktop"
+[Desktop Entry]
+Version=1.0
+Name=AURORA IDM
+GenericName=Internet Download Manager
+Comment=Ultra-High Performance Internet Download Manager
+Exec="${PROJECT_ROOT}/target/release/aurora-desktop" %U
+Icon=aurora-desktop
+Terminal=false
+Type=Application
+Categories=Network;FileTransfer;Utility;
+MimeType=x-scheme-handler/aurora;x-scheme-handler/auroradl;
+Keywords=download;manager;accelerator;idm;aurora;kaushal;
+StartupWMClass=aurora-desktop
+StartupNotify=true
+EOF
+
+    chmod +x "$HOME/.local/share/applications/aurora-desktop.desktop"
+
+    # Register default protocol handler for aurora:// and auroradl://
+    command -v xdg-mime &>/dev/null && xdg-mime default aurora-desktop.desktop x-scheme-handler/aurora x-scheme-handler/auroradl 2>/dev/null || true
     command -v gtk-update-icon-cache &>/dev/null && gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
     command -v update-desktop-database &>/dev/null && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-    echo -e "  ✅ Installed Desktop Application Launcher & High-Res App Icons"
+    echo -e "  ✅ Installed Desktop Application Launcher, Protocol Handler (aurora://, auroradl://) & High-Res App Icons"
 fi
 
 cd "$PROJECT_ROOT"

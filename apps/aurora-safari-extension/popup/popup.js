@@ -35,6 +35,7 @@ const desktopStatusDot = document.getElementById('desktop-status-dot');
 const desktopStatusText = document.getElementById('desktop-status-text');
 const desktopStatusSub = document.getElementById('desktop-status-sub');
 const btnDownloadDesktop = document.getElementById('btn-download-desktop');
+const btnOpenApp = document.getElementById('btn-open-app');
 const btnSyncNow = document.getElementById('btn-sync-now');
 const lblForwardToggle = document.getElementById('lbl-forward-toggle');
 const checkForwardDesktop = document.getElementById('check-forward-desktop');
@@ -66,6 +67,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   btnOptions.addEventListener('click', () => chrome.runtime.openOptionsPage());
+
+  if (btnOpenApp) {
+    btnOpenApp.addEventListener('click', async () => {
+      try {
+        await fetch('http://127.0.0.1:28282/api/open-app', { method: 'POST' });
+      } catch (_) {
+        window.location.href = 'aurora://open';
+      }
+    });
+  }
 
   if (btnSyncNow) {
     btnSyncNow.addEventListener('click', async () => {
@@ -156,12 +167,15 @@ async function checkDesktopBridge() {
 
 function updateDesktopBannerUI(connected, version = '0.1.0') {
   if (!desktopSyncBanner) return;
+  const bannerIcon = document.getElementById('desktop-banner-icon');
   if (connected) {
     desktopSyncBanner.className = 'desktop-banner banner-connected';
     if (desktopStatusDot) desktopStatusDot.className = 'status-dot dot-connected';
     if (desktopStatusText) desktopStatusText.textContent = `🟢 AURORA Desktop Connected (v${version})`;
     if (desktopStatusSub) desktopStatusSub.textContent = 'Hardware Accelerated Engine (32-Streams Active)';
+    if (bannerIcon) bannerIcon.title = `AURORA Desktop Connected (v${version})`;
     if (btnDownloadDesktop) btnDownloadDesktop.classList.add('hidden');
+    if (btnOpenApp) btnOpenApp.classList.remove('hidden');
     if (btnSyncNow) btnSyncNow.classList.remove('hidden');
     if (lblForwardToggle) lblForwardToggle.classList.remove('hidden');
   } else {
@@ -169,7 +183,9 @@ function updateDesktopBannerUI(connected, version = '0.1.0') {
     if (desktopStatusDot) desktopStatusDot.className = 'status-dot dot-offline';
     if (desktopStatusText) desktopStatusText.textContent = 'Download AURORA for Desktop';
     if (desktopStatusSub) desktopStatusSub.textContent = 'Linux (.deb), Windows (.exe), Mac (.dmg)';
+    if (bannerIcon) bannerIcon.title = 'AURORA Desktop Disconnected';
     if (btnDownloadDesktop) btnDownloadDesktop.classList.remove('hidden');
+    if (btnOpenApp) btnOpenApp.classList.add('hidden');
     if (btnSyncNow) btnSyncNow.classList.add('hidden');
     if (lblForwardToggle) lblForwardToggle.classList.add('hidden');
   }

@@ -44,17 +44,13 @@
   <!-- Desktop App Connection & Download Banner -->
   <section id="desktop-sync-banner" class="desktop-banner banner-offline">
     <div class="desktop-banner-main">
-      <div class="desktop-banner-icon">
+      <div id="desktop-banner-icon" class="desktop-banner-icon" title="AURORA Desktop Bridge">
         <svg id="desktop-icon-offline" class="banner-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
           <line x1="8" y1="21" x2="16" y2="21"></line>
           <line x1="12" y1="17" x2="12" y2="21"></line>
         </svg>
         <span id="desktop-status-dot" class="status-dot dot-offline"></span>
-      </div>
-      <div class="desktop-banner-info">
-        <span id="desktop-status-text" class="banner-title">Download AURORA for Desktop</span>
-        <span id="desktop-status-sub" class="banner-subtitle">Linux (.deb), Windows (.exe), Mac (.dmg)</span>
       </div>
     </div>
     <div id="desktop-banner-actions" class="desktop-banner-actions">
@@ -66,6 +62,14 @@
         </svg>
         <span>Get Desktop</span>
       </a>
+      <button id="btn-open-app" class="btn-banner-open hidden" title="Open and focus AURORA Desktop App">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+        <span>Open App</span>
+      </button>
       <button id="btn-sync-now" class="btn-banner-sync hidden" title="Sync downloads with Desktop App">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"></polyline>

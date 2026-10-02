@@ -56,6 +56,15 @@ export interface EngineConfigDto {
   write_buffer_bytes: number;
   request_timeout_secs: number;
   max_retries: number;
+  autostart?: boolean;
+  minimize_to_tray?: boolean;
+  clipboard_sniffing?: boolean;
+}
+
+export interface AppSettingsDto {
+  autostart: boolean;
+  minimize_to_tray: boolean;
+  clipboard_sniffing: boolean;
 }
 
 export interface TelemetryPayload {

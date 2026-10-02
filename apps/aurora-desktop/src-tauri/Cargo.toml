@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 aurora-core = { path = "../../../crates/aurora-core" }
 aurora-storage = { path = "../../../crates/aurora-storage" }
 aurora-http = { path = "../../../crates/aurora-http" }

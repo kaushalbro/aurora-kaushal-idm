@@ -396,3 +396,67 @@ pub async fn update_config(
     lock.config.max_retries = config.max_retries as u32;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_autostart_status() -> Result<bool, String> {
+    Ok(crate::autostart::is_autostart_enabled())
+}
+
+#[tauri::command]
+pub async fn set_autostart_status(enabled: bool) -> Result<bool, String> {
+    crate::autostart::set_autostart(enabled)?;
+    Ok(crate::autostart::is_autostart_enabled())
+}
+
+#[tauri::command]
+pub async fn pause_all_downloads(state: tauri::State<'_, SharedAppState>) -> Result<(), String> {
+    let mut lock = state.lock().await;
+    for item in lock.downloads.iter_mut() {
+        if item.is_active && item.status == "downloading" {
+            item.pause_signal.store(true, Ordering::SeqCst);
+            item.status = "paused".to_string();
+            item.is_active = false;
+            item.current_speed = 0.0;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn resume_all_downloads(state: tauri::State<'_, SharedAppState>) -> Result<(), String> {
+    let to_resume: Vec<String> = {
+        let lock = state.lock().await;
+        lock.downloads
+            .iter()
+            .filter(|d| d.status == "paused" && !d.is_active)
+            .map(|d| d.id.to_string())
+            .collect()
+    };
+
+    for id in to_resume {
+        let _ = resume_download(state.clone(), id).await;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn hide_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+    Ok(())
+}
+

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTauri } from './hooks/useTauri';
+import { useClipboardSniffer } from './hooks/useClipboardSniffer';
 import { CategoryFilter, DownloadItemDto } from './types';
 import { Header } from './components/Header';
 import { SelectionBar } from './components/SelectionBar';
@@ -13,12 +14,80 @@ import { SettingsModal } from './components/modals/SettingsModal';
 import { InspectorModal } from './components/modals/InspectorModal';
 
 export const App: React.FC = () => {
+  // Navigation & Filtering
+  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
+  const [showSpeedGraph, setShowSpeedGraph] = useState<boolean>(false);
+
+  // Multi-Selection State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Modals state (coordinated so only 1 modal is open at a time)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [inspectingItem, setInspectingItem] = useState<DownloadItemDto | null>(null);
+
+  // URL detected from browser, clipboard, or deep link (aurora://)
+  const [incomingUrl, setIncomingUrl] = useState<string>('');
+
+  // Clipboard sniffer setting (persisted locally)
+  const [clipboardSniffing, setClipboardSniffing] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('aurora_clip_sniff') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    item: DownloadItemDto;
+  } | null>(null);
+
+  // Modal helpers
+  const openAddModalWithUrl = useCallback((url?: string) => {
+    setIncomingUrl(url || '');
+    setIsAddModalOpen(true);
+    setIsBatchModalOpen(false);
+    setIsSettingsModalOpen(false);
+    setInspectingItem(null);
+  }, []);
+
+  const openAddModal = useCallback(() => {
+    openAddModalWithUrl('');
+  }, [openAddModalWithUrl]);
+
+  const openBatchModal = useCallback(() => {
+    setIsBatchModalOpen(true);
+    setIsAddModalOpen(false);
+    setIsSettingsModalOpen(false);
+    setInspectingItem(null);
+  }, []);
+
+  const openSettingsModal = useCallback(() => {
+    setIsSettingsModalOpen(true);
+    setIsAddModalOpen(false);
+    setIsBatchModalOpen(false);
+    setInspectingItem(null);
+  }, []);
+
+  const openInspectorModal = useCallback((item: DownloadItemDto) => {
+    setInspectingItem(item);
+    setIsAddModalOpen(false);
+    setIsBatchModalOpen(false);
+    setIsSettingsModalOpen(false);
+  }, []);
+
+  // Main Tauri hook connecting Rust backend + IPC + system tray
   const {
     downloads,
     totalSpeedStr,
     activeTasks,
     speedHistory,
     config,
+    autostartEnabled,
     toastMessage,
     showToast,
     addDownload,
@@ -33,57 +102,24 @@ export const App: React.FC = () => {
     verifyChecksum,
     openFolder,
     openFile,
+    setAutostart,
     saveConfig,
-  } = useTauri();
+  } = useTauri({
+    onExternalUrl: (url) => {
+      openAddModalWithUrl(url);
+    },
+    onOpenAddModal: openAddModal,
+    onOpenSettingsModal: openSettingsModal,
+  });
 
-  // Navigation & Filtering
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
-  const [showSpeedGraph, setShowSpeedGraph] = useState<boolean>(false);
-
-  // Multi-Selection State
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // Modals state (coordinated so only 1 modal is open at a time)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [inspectingItem, setInspectingItem] = useState<DownloadItemDto | null>(null);
-
-  // Context Menu State
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    item: DownloadItemDto;
-  } | null>(null);
-
-  // Modal helpers
-  const openAddModal = () => {
-    setIsAddModalOpen(true);
-    setIsBatchModalOpen(false);
-    setIsSettingsModalOpen(false);
-    setInspectingItem(null);
-  };
-
-  const openBatchModal = () => {
-    setIsBatchModalOpen(true);
-    setIsAddModalOpen(false);
-    setIsSettingsModalOpen(false);
-    setInspectingItem(null);
-  };
-
-  const openSettingsModal = () => {
-    setIsSettingsModalOpen(true);
-    setIsAddModalOpen(false);
-    setIsBatchModalOpen(false);
-    setInspectingItem(null);
-  };
-
-  const openInspectorModal = (item: DownloadItemDto) => {
-    setInspectingItem(item);
-    setIsAddModalOpen(false);
-    setIsBatchModalOpen(false);
-    setIsSettingsModalOpen(false);
-  };
+  // Universal clipboard sniffer across ANY browser
+  useClipboardSniffer({
+    enabled: clipboardSniffing,
+    onDetectDownloadUrl: (url) => {
+      openAddModalWithUrl(url);
+      showToast(`📋 Detected download link from clipboard: ${url.slice(0, 48)}...`);
+    },
+  });
 
   // Multi-selection handlers
   const handleToggleSelect = (id: string) => {
@@ -210,7 +246,11 @@ export const App: React.FC = () => {
       {/* Centered Animated Dialog Modals */}
       <AddUrlModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        initialUrl={incomingUrl}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setIncomingUrl('');
+        }}
         onSubmit={addDownload}
         onProbeUrl={probeUrl}
       />
@@ -225,6 +265,15 @@ export const App: React.FC = () => {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         config={config}
+        autostartEnabled={autostartEnabled}
+        onToggleAutostart={setAutostart}
+        clipboardSniffing={clipboardSniffing}
+        onToggleClipboardSniffing={(enabled) => {
+          setClipboardSniffing(enabled);
+          try {
+            localStorage.setItem('aurora_clip_sniff', String(enabled));
+          } catch {}
+        }}
         onSave={saveConfig}
       />
 

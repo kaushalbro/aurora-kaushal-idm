@@ -279,12 +279,19 @@ impl AuroraApp {
         }
     }
 
-    pub fn process_events(&mut self) {
+    pub fn process_events(&mut self, ctx: &Context) {
         while let Ok(cmd) = self.command_rx.try_recv() {
             match cmd {
                 crate::server::DesktopBridgeCommand::StartDownload { url, filename, connections } => {
                     self.add_download(&url, filename.as_deref(), connections);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
                     self.set_toast("📥 Download initiated from Browser Extension");
+                }
+                crate::server::DesktopBridgeCommand::FocusWindow => {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+                    self.set_toast("⚡ AURORA Desktop Focused from Browser Extension");
                 }
             }
         }
@@ -485,7 +492,7 @@ impl AuroraApp {
 
 impl eframe::App for AuroraApp {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        self.process_events();
+        self.process_events(ctx);
 
         // Sample speed every second for real-time telemetry graph
         let total_speed: f64 = self.downloads.iter().map(|d| d.current_speed).sum();
