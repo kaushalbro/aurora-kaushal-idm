@@ -91,8 +91,6 @@ StartupWMClass=aurora-desktop
 StartupNotify=true
 EOF
 
-cp "${DEB_ROOT}/usr/share/applications/aurora-desktop.desktop" "${DEB_ROOT}/usr/share/applications/aurora-idm.desktop" 2>/dev/null || true
-
 # DEBIAN/control
 INST_SIZE=$(du -sk "${DEB_ROOT}/usr" | cut -f1)
 cat << EOF > "${DEB_ROOT}/DEBIAN/control"
@@ -119,7 +117,10 @@ killall -9 aurora-gui 2>/dev/null || true
 pkill -f aurora-desktop 2>/dev/null || true
 pkill -f aurora-gui 2>/dev/null || true
 
+rm -f /usr/share/applications/aurora-idm.desktop 2>/dev/null || true
 rm -f /usr/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/aurora-idm.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
 rm -f /home/*/.local/share/applications/com.aurora.kaushal.idm.desktop 2>/dev/null || true
 rm -rf /tmp/aurora* /var/tmp/aurora* 2>/dev/null || true
 exit 0
@@ -131,9 +132,13 @@ cat << 'EOF' > "${DEB_ROOT}/DEBIAN/postinst"
 #!/bin/sh
 set -e
 chmod 755 /usr/bin/aurora-desktop
+rm -f /usr/share/applications/aurora-idm.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/aurora-idm.desktop 2>/dev/null || true
+rm -f /home/*/.local/share/applications/aurora-desktop.desktop 2>/dev/null || true
 
 if which update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q /usr/share/applications 2>/dev/null || true
+    update-desktop-database -q /home/*/.local/share/applications 2>/dev/null || true
 fi
 if which gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
