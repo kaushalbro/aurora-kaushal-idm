@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Aurora Kaushal Download Manager - Nepal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "High-performance adaptive multi-connection download manager powered by pure WebAssembly and ECT scheduling.",
   "icons": {
     "16": "icons/icon-16.png",

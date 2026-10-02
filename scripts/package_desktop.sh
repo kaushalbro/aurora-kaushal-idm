@@ -16,7 +16,7 @@ DIST_DIR="${ROOT_DIR}/dist"
 TARGET_DIR="${ROOT_DIR}/target"
 PKG_DIR="${TARGET_DIR}/pkg"
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 APP_NAME="aurora-kaushal-idm"
 BIN_NAME="aurora-gui"
 

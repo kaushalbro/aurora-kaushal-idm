@@ -14,13 +14,13 @@ import urllib.error
 
 REPO_OWNER = "kaushalbro"
 REPO_NAME = "aurora-kaushal-idm"
-TAG_NAME = "v0.1.0"
-RELEASE_TITLE = "AURORA Kaushal IDM v0.1.0 - Official Multi-Platform Release"
+TAG_NAME = "v0.2.0"
+RELEASE_TITLE = "AURORA Kaushal IDM v0.2.0 - Official Multi-Platform Release"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 DIST_DIR = os.path.join(ROOT_DIR, "dist")
-RELEASE_NOTES_PATH = os.path.join(DIST_DIR, "RELEASE_NOTES_v0.1.0.md")
+RELEASE_NOTES_PATH = os.path.join(DIST_DIR, "RELEASE_NOTES_v0.2.0.md")
 
 
 def get_token():

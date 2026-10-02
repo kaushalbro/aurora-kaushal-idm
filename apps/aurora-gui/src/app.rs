@@ -659,7 +659,7 @@ impl eframe::App for AuroraApp {
                         );
                         pill_badge(ui, "NATIVE", theme::COLOR_ACCENT_BLUE, Color32::WHITE);
                         ui.label(
-                            RichText::new("Kaushal IDM v0.1.0")
+                            RichText::new("Kaushal IDM v0.2.0")
                                 .size(11.0)
                                 .color(theme::COLOR_TEXT_SECONDARY),
                         );

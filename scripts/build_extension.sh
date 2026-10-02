@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EXT_DIR="$ROOT_DIR/apps/aurora-extension"
 FIREFOX_DIR="$ROOT_DIR/apps/aurora-firefox-extension"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="0.1.0"
+VERSION="0.2.0"
 
 echo "============================================================"
 echo " ⚡ AURORA Kaushal IDM - Dual Browser Extension Builder"
@@ -46,7 +46,7 @@ cat > "$FIREFOX_DIR/manifest.json" << 'EOF'
 {
   "manifest_version": 3,
   "name": "Aurora Kaushal Download Manager - Nepal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "High-performance adaptive multi-connection download manager powered by pure WebAssembly and ECT scheduling.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -131,7 +131,7 @@ cat > "$SAFARI_DIR/manifest.json" << 'EOF'
 {
   "manifest_version": 3,
   "name": "Aurora Kaushal Download Manager - Nepal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "High-performance adaptive multi-connection download manager powered by pure WebAssembly and ECT scheduling.",
   "icons": {
     "16": "icons/icon-16.png",

@@ -1,11 +1,11 @@
 ; ==============================================================================
 ; AURORA Kaushal IDM - Modern NSIS Windows Installer Script
-; Produces: dist/aurora-kaushal-idm-v0.1.0-setup.exe
+; Produces: dist/aurora-kaushal-idm-v0.2.0-setup.exe
 ; ==============================================================================
 
 !define PRODUCT_NAME "AURORA IDM"
 !define PRODUCT_FULL_NAME "AURORA Kaushal IDM"
-!define PRODUCT_VERSION "0.1.0"
+!define PRODUCT_VERSION "0.2.0"
 !define PRODUCT_PUBLISHER "AURORA Development Team"
 !define PRODUCT_WEB_SITE "https://github.com/kaushalbro/aurora-kaushal-idm"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\aurora-gui.exe"

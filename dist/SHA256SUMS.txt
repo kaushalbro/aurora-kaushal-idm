@@ -1,4 +1,12 @@
-b8bd641706d56b9a538fdecf79418647e027a94ef7a2ea70ef58d653187bcfbb  aurora-kaushal-idm_0.1.0_amd64.deb
-b3bfbdcab2790be70bd3d27f9f248e98511474c3f4608260b9761eabca183724  aurora-kaushal-idm-v0.1.0-linux-x86_64.tar.gz
-14454a415a4c2cb6ffb38b005e9b6eabee19ab91ee535b3488e4a435b7fc2138  aurora-kaushal-idm-v0.1.0-macos.zip
-341ec286ea18c8f4c9457e51b882c5497b25335e833a7f0dbbc700ef03ba075e  aurora-kaushal-idm-v0.1.0-windows-x64.zip
+b528f8efde5a76160f767bbc2e65844d049e38b9e87ca03464f6dd64d8bcb230  aurora-brave-v0.2.0.zip
+b528f8efde5a76160f767bbc2e65844d049e38b9e87ca03464f6dd64d8bcb230  aurora-chrome-v0.2.0.zip
+b528f8efde5a76160f767bbc2e65844d049e38b9e87ca03464f6dd64d8bcb230  aurora-edge-v0.2.0.zip
+b528f8efde5a76160f767bbc2e65844d049e38b9e87ca03464f6dd64d8bcb230  aurora-extension-v0.2.0.zip
+e3ea84df7134d265cd3b0fe69183aad897accbef58b55f18664e67a21560ac24  aurora-firefox-v0.2.0.xpi
+e3ea84df7134d265cd3b0fe69183aad897accbef58b55f18664e67a21560ac24  aurora-firefox-v0.2.0.zip
+d8eb09d4d645a7b18441669336d28799ff2e552550851a19f01ecf4ba884164c  aurora-kaushal-idm_0.2.0_amd64.deb
+bbbe674369bf19543c469e97801b5f8058d83af10fde15e74850f46207479593  aurora-kaushal-idm-v0.2.0-linux-x86_64.tar.gz
+5aa2cc66f8e276b49742c7f0a37b093a7062ec7ecf0e4d066ef0f1fefc4a5d4b  aurora-kaushal-idm-v0.2.0-macos.zip
+5db4620bc018795e1f98f184460b0bdbeea4e3d95247b5fa99d6c79d00a3930f  aurora-kaushal-idm-v0.2.0-setup.exe
+8f43d2300f82184f99dc99211ec7918177790e7eb0c4cb8181d0eaa48ce8249c  aurora-kaushal-idm-v0.2.0-windows-x64.zip
+420f6152c18efe88071794323ba0f4d9c3a8ff10ea191359761e767aef880408  aurora-safari-v0.2.0.zip

@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DIST_DIR="${ROOT_DIR}/dist"
-VERSION="v0.1.0"
+VERSION="v0.2.0"
 
 echo "============================================================"
 echo " 🚀 AURORA Kaushal IDM - GitHub Release Publisher"
@@ -16,7 +16,7 @@ echo "    Target Release: ${VERSION}"
 echo "============================================================"
 
 # Ensure all packages are built
-if [[ ! -f "${DIST_DIR}/aurora-kaushal-idm_0.1.0_amd64.deb" ]] || [[ ! -f "${DIST_DIR}/aurora-kaushal-idm-v0.1.0-windows-x64.zip" ]]; then
+if [[ ! -f "${DIST_DIR}/aurora-kaushal-idm_0.2.0_amd64.deb" ]] || [[ ! -f "${DIST_DIR}/aurora-kaushal-idm-v0.2.0-windows-x64.zip" ]]; then
   echo "Building all packages first..."
   bash "${SCRIPT_DIR}/build_extension.sh" all
   bash "${SCRIPT_DIR}/package_desktop.sh"

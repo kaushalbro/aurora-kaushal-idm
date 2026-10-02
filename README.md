@@ -33,7 +33,7 @@ Download the official `.deb` installer and install via package manager:
 
 ```bash
 # Install package
-sudo dpkg -i aurora-kaushal-idm_0.1.0_amd64.deb
+sudo dpkg -i aurora-kaushal-idm_0.2.0_amd64.deb
 
 # Launch application
 aurora-gui
@@ -41,20 +41,20 @@ aurora-gui
 
 ### 2. Windows (10 / 11)
 
-1. Download `aurora-kaushal-idm-v0.1.0-windows-x64.zip`.
+1. Download `aurora-kaushal-idm-v0.2.0-windows-x64.zip`.
 2. Extract the archive.
 3. Double-click `install.bat` for an automated clean install and Desktop shortcut creation, or launch `aurora-gui.exe` directly as a portable application.
 
 ### 3. macOS (10.15+)
 
-1. Download `aurora-kaushal-idm-v0.1.0-macos.zip`.
+1. Download `aurora-kaushal-idm-v0.2.0-macos.zip`.
 2. Extract the archive.
 3. Run `./install.sh` to install `AURORA Kaushal IDM.app` into `/Applications`, or drag the application bundle to `/Applications`.
 
 ### 4. Linux Generic / Portable (Arch, Fedora, openSUSE)
 
 ```bash
-tar -xzf aurora-kaushal-idm-v0.1.0-linux-x86_64.tar.gz
+tar -xzf aurora-kaushal-idm-v0.2.0-linux-x86_64.tar.gz
 cd linux-portable
 ./install.sh
 ```
