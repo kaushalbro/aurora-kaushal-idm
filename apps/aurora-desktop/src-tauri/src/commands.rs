@@ -75,13 +75,18 @@ pub async fn add_download(
 ) -> Result<String, String> {
     let parsed_url = Url::parse(&url).map_err(|e| format!("Invalid URL: {}", e))?;
     let mut lock = state.lock().await;
+    let probed = lock.probed_caps.get(&url);
 
     let final_filename = if let Some(ref cf) = filename {
         if !cf.trim().is_empty() {
             cf.trim().to_string()
+        } else if let Some(suggested) = probed.and_then(|p| p.suggested_filename.as_ref()) {
+            suggested.clone()
         } else {
             extract_filename_from_url(&parsed_url)
         }
+    } else if let Some(suggested) = probed.and_then(|p| p.suggested_filename.as_ref()) {
+        suggested.clone()
     } else {
         extract_filename_from_url(&parsed_url)
     };
@@ -92,8 +97,6 @@ pub async fn add_download(
     let cancel_signal = Arc::new(AtomicBool::new(false));
     let conns = connections.unwrap_or(lock.config.initial_connections);
     let start_time_str = chrono::Local::now().format("%H:%M:%S").to_string();
-
-    let probed = lock.probed_caps.get(&url);
 
     let item = InternalDownloadItem {
         id: download_id,
@@ -299,7 +302,10 @@ pub async fn probe_url(
         http_version: caps.http_version.clone(),
         rtt_ms: caps.rtt_ms,
         health_rating: caps.health_rating.clone(),
-        suggested_filename: Some(extract_filename_from_url(&caps.final_url)),
+        suggested_filename: caps
+            .suggested_filename
+            .clone()
+            .or_else(|| Some(extract_filename_from_url(&caps.final_url))),
     };
 
     let mut lock = state.lock().await;
