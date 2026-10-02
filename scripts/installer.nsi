@@ -20,6 +20,17 @@ SetCompressor /SOLID lzma
 ; Request user-level permissions (No UAC prompt required, standard modern app)
 RequestExecutionLevel user
 
+; Embedded Windows PE Version Information & Publisher Metadata
+VIProductVersion "${PRODUCT_VERSION}.0"
+VIAddVersionKey "ProductName" "${PRODUCT_FULL_NAME}"
+VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
+VIAddVersionKey "LegalCopyright" "Copyright (c) 2026 ${PRODUCT_PUBLISHER}"
+VIAddVersionKey "FileDescription" "${PRODUCT_FULL_NAME} Modern Desktop Installer"
+VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}.0"
+VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}.0"
+VIAddVersionKey "OriginalFilename" "aurora-kaushal-idm-v${PRODUCT_VERSION}-setup.exe"
+VIAddVersionKey "Comments" "Ultra-High Performance Internet Download Manager"
+
 ; Includes
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
