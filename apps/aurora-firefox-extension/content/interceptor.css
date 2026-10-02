@@ -1,0 +1,239 @@
+/* Flying File Icon (Tossed Parabolic Arc to Top-Right Toolbar Icon) */
+.aurora-flying-file {
+  position: fixed;
+  z-index: 2147483647;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: aurora-parabolic-fly 0.65s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+  will-change: transform, opacity;
+}
+
+.flying-file-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  padding: 6px 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  animation: flying-card-spin 0.65s ease-in-out forwards;
+}
+
+.flying-file-doc {
+  font-size: 18px;
+}
+
+.flying-file-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background-color: #007aff;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+@keyframes aurora-parabolic-fly {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.4;
+  }
+  20% {
+    opacity: 1;
+    transform: translate(calc(var(--delta-x) * 0.2 - 50%), calc(var(--delta-y) * 0.1 - 40px - 50%)) scale(1.1);
+  }
+  60% {
+    transform: translate(calc(var(--delta-x) * 0.65 - 50%), calc(var(--delta-y) * 0.55 - 50px - 50%)) scale(0.95);
+  }
+  85% {
+    transform: translate(calc(var(--delta-x) * 0.9 - 50%), calc(var(--delta-y) * 0.88 - 50%)) scale(0.8);
+  }
+  100% {
+    transform: translate(calc(var(--delta-x) - 50%), calc(var(--delta-y) - 50%)) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes flying-card-spin {
+  0% { transform: rotate(-8deg); }
+  40% { transform: rotate(10deg); }
+  80% { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Top-Right Download Panel Container (Anchored directly below Extension Icon) */
+#aurora-top-panel-container {
+  position: fixed;
+  top: 14px;
+  right: 20px;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  animation: aurora-panel-drop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.aurora-top-panel {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  width: 320px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  color: #1d1d1f;
+}
+
+.aurora-panel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background-color: #f5f5f7;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.aurora-panel-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aurora-bucket-landing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bucket-landing-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes bucket-landing-bounce {
+  0% { transform: scale(0.8); }
+  40% { transform: scale(1.2, 0.85); }
+  70% { transform: scale(0.95, 1.05); }
+  100% { transform: scale(1); }
+}
+
+.aurora-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+  letter-spacing: -0.2px;
+}
+
+.aurora-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aurora-status-pill {
+  font-size: 10px;
+  font-weight: 600;
+  background-color: rgba(0, 122, 255, 0.12);
+  color: #007aff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.aurora-btn-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: #86868b;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.aurora-btn-close:hover {
+  color: #1d1d1f;
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.aurora-panel-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aurora-panel-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.aurora-ext-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background-color: #007aff;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.aurora-filename-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d1d1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.aurora-panel-progress-wrap {
+  height: 5px;
+  background-color: #e5e5ea;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.aurora-panel-progress-bar {
+  height: 100%;
+  width: 45%;
+  background-color: #007aff;
+  border-radius: 3px;
+  animation: panel-pulse-progress 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes panel-pulse-progress {
+  0% { width: 25%; }
+  100% { width: 85%; }
+}
+
+.aurora-panel-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #86868b;
+}
+
+.aurora-meta-msg {
+  color: #007aff;
+  font-weight: 500;
+}
+
+.aurora-panel-fadeout {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+@keyframes aurora-panel-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

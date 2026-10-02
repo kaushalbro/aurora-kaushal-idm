@@ -1,0 +1,31 @@
+[package]
+name = "aurora-benchmark"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aurora-core.workspace = true
+aurora-scheduler.workspace = true
+aurora-http.workspace = true
+aurora-storage.workspace = true
+aurora-metrics.workspace = true
+aurora-recovery.workspace = true
+tokio.workspace = true
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+bytes.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+tracing.workspace = true
+rand.workspace = true
+thiserror.workspace = true
+futures-util.workspace = true
+async-stream.workspace = true
+
+[dev-dependencies]
+tempfile = "3.12"
+reqwest.workspace = true

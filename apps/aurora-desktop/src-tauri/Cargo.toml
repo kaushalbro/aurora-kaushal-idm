@@ -1,0 +1,30 @@
+[package]
+name = "aurora-desktop"
+version = "0.1.0"
+edition = "2021"
+authors = ["AURORA Development Team"]
+license = "MIT OR Apache-2.0"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+aurora-core = { path = "../../../crates/aurora-core" }
+aurora-storage = { path = "../../../crates/aurora-storage" }
+aurora-http = { path = "../../../crates/aurora-http" }
+aurora-metrics = { path = "../../../crates/aurora-metrics" }
+aurora-recovery = { path = "../../../crates/aurora-recovery" }
+aurora-scheduler = { path = "../../../crates/aurora-scheduler" }
+aurora-history = { path = "../../../crates/aurora-history" }
+aurora-benchmark = { path = "../../../crates/aurora-benchmark" }
+tokio = { version = "1.40", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+url = { version = "2.5", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+blake3 = "1.5"
+uuid = { version = "1.10", features = ["v4", "serde"] }

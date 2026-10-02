@@ -1,0 +1,16 @@
+[package]
+name = "aurora-metrics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aurora-core.workspace = true
+serde.workspace = true
+tracing.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Windows sys calls for memory/cpu if needed
+
+[dev-dependencies]

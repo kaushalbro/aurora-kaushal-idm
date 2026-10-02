@@ -1,0 +1,27 @@
+[package]
+name = "aurora-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "aurora"
+path = "src/main.rs"
+
+[dependencies]
+aurora-core.workspace = true
+aurora-storage.workspace = true
+aurora-http.workspace = true
+aurora-metrics.workspace = true
+aurora-recovery.workspace = true
+aurora-scheduler.workspace = true
+aurora-history.workspace = true
+aurora-benchmark.workspace = true
+tokio.workspace = true
+clap.workspace = true
+indicatif.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+url.workspace = true
+anyhow.workspace = true

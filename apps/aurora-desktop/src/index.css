@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-mac-bg: #f3f4f6;
+  --color-mac-header: #ffffff;
+  --color-mac-stats: #fafafa;
+  --color-mac-card: #ffffff;
+  --color-mac-card-hover: #f9fafb;
+  --color-mac-border: rgba(0, 0, 0, 0.12);
+  --color-mac-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-mac-blue: #007aff;
+  --color-mac-blue-hover: #0066d6;
+  --color-mac-blue-active: #0058ba;
+  --color-mac-blue-dim: rgba(0, 122, 255, 0.12);
+  --color-mac-green: #16a34a;
+  --color-mac-green-dim: rgba(22, 163, 74, 0.14);
+  --color-mac-red: #dc2626;
+  --color-mac-red-dim: rgba(220, 38, 38, 0.14);
+  --color-mac-orange: #d97706;
+  --color-mac-orange-dim: rgba(217, 119, 6, 0.14);
+  --color-mac-text-primary: #111827;
+  --color-mac-text-secondary: #374151;
+  --color-mac-text-tertiary: #6b7280;
+  --color-mac-track: #e5e7eb;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background-color: #f3f4f6;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Custom smooth scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.22);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.35);
+}

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURORA Settings</title>
+  <link rel="stylesheet" href="../popup/popup.css">
+  <style>
+    body {
+      width: 100%;
+      max-width: 600px;
+      margin: 24px auto;
+      padding: 0 16px;
+      background-color: var(--mac-bg);
+      font-family: var(--mac-font);
+      color: var(--mac-text-primary);
+      overflow-y: auto;
+      height: auto;
+    }
+    .options-card {
+      background: var(--mac-card);
+      border: 1px solid var(--mac-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-top: 16px;
+    }
+    .options-section {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--mac-border);
+    }
+    .options-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--mac-blue);
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--mac-text-primary);
+    }
+    .help-text {
+      font-size: 11px;
+      color: var(--mac-text-secondary);
+      margin-top: 4px;
+    }
+    .save-alert {
+      margin-top: 16px;
+      padding: 10px 14px;
+      background-color: var(--mac-green-dim);
+      border: 1px solid var(--mac-green);
+      color: var(--mac-green);
+      border-radius: var(--radius-sm);
+      display: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header class="header" style="border-radius: var(--radius-md);">
+    <div class="brand">
+      <img src="../icons/icon-48.png" alt="AURORA" class="logo">
+      <div>
+        <h1 class="title">AURORA Kaushal IDM</h1>
+        <p class="subtitle">Configuration & Preferences</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="options-card">
+    <div class="options-section">
+      <h2 class="section-title">Browser Interception</h2>
+      <label class="checkbox-label">
+        <input type="checkbox" id="check-auto-capture">
+        Automatically intercept file downloads in Chrome
+      </label>
+      <p class="help-text">When enabled, AURORA will automatically take over downloads for matched file types and accelerate them with multi-streams.</p>
+    </div>
+
+    <div class="options-section">
+      <h2 class="section-title">Interception File Extensions</h2>
+      <div class="form-group">
+        <input type="text" id="input-extensions" placeholder="zip, iso, tar, gz, 7z, rar, exe, bin, mp4, mkv, dmg">
+        <p class="help-text">Comma-separated list of file extensions to automatically capture.</p>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <h2 class="section-title">Default Download Concurrency</h2>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="select-default-conns">Parallel Connections</label>
+          <select id="select-default-conns">
+            <option value="4">4 Connections</option>
+            <option value="8">8 Connections (Recommended)</option>
+            <option value="16">16 Connections (High-Speed)</option>
+            <option value="32">32 Connections (Extreme)</option>
+          </select>
+        </div>
+        <div class="form-group flex-1">
+          <label for="select-default-scheduler">Default Scheduler</label>
+          <select id="select-default-scheduler">
+            <option value="aurora-ect">AURORA ECT (Adaptive)</option>
+            <option value="largest-segment">Largest Segment (IDM)</option>
+            <option value="fixed">Fixed Partitioning</option>
+            <option value="single">Single Stream</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+      <button id="btn-save-options" class="btn btn-primary" style="padding: 8px 20px;">Save Settings</button>
+    </div>
+
+    <div id="save-alert" class="save-alert">Settings saved successfully!</div>
+  </div>
+
+  <script src="options.js" type="module"></script>
+</body>
+</html>

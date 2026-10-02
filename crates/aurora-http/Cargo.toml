@@ -1,0 +1,23 @@
+[package]
+name = "aurora-http"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aurora-core.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+bytes.workspace = true
+url.workspace = true
+http.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+rand.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURORA Kaushal IDM</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header Toolbar (Two Rows Centered) -->
+  <header class="header">
+    <div class="header-top-row">
+      <img src="../icons/icon-48.png" alt="AURORA" class="logo">
+      <h1 class="title-brand">Aurora Kaushal Download Manager - Nepal</h1>
+    </div>
+    <div class="header-actions-row">
+      <button id="btn-add-modal" class="btn btn-primary">
+        <svg class="btn-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Add URL</span>
+      </button>
+      <button id="btn-open-folder" class="btn btn-icon" title="Open Downloads Folder in File Explorer">
+        <svg class="btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+      <button id="btn-clear" class="btn btn-icon" title="Clear completed downloads">
+        <svg class="btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+      <button id="btn-options" class="btn btn-icon" title="Settings">
+        <svg class="btn-svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Desktop App Connection & Download Banner -->
+  <section id="desktop-sync-banner" class="desktop-banner banner-offline">
+    <div class="desktop-banner-main">
+      <div class="desktop-banner-icon">
+        <svg id="desktop-icon-offline" class="banner-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span id="desktop-status-dot" class="status-dot dot-offline"></span>
+      </div>
+      <div class="desktop-banner-info">
+        <span id="desktop-status-text" class="banner-title">Download AURORA for Desktop</span>
+        <span id="desktop-status-sub" class="banner-subtitle">Linux (.deb), Windows (.exe), Mac (.dmg)</span>
+      </div>
+    </div>
+    <div id="desktop-banner-actions" class="desktop-banner-actions">
+      <a id="btn-download-desktop" href="https://github.com/aurora-idm/aurora/releases" target="_blank" class="btn-banner-download" title="Download for Windows / macOS / Linux">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Get Desktop</span>
+      </a>
+      <button id="btn-sync-now" class="btn-banner-sync hidden" title="Sync downloads with Desktop App">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        <span>Sync</span>
+      </button>
+      <label id="lbl-forward-toggle" class="forward-toggle-wrap hidden" title="Automatically route new downloads to Desktop App">
+        <input type="checkbox" id="check-forward-desktop" checked>
+        <span class="forward-slider"></span>
+        <span class="forward-label">Auto-Route</span>
+      </label>
+    </div>
+  </section>
+
+  <!-- Global Stats Bar -->
+  <section class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Total Speed</span>
+      <span id="stat-total-speed" class="stat-value speed-highlight">0.00 MB/s</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Active Tasks</span>
+      <span id="stat-active-tasks" class="stat-value">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Engine</span>
+      <span class="stat-value text-blue">AURORA ECT</span>
+    </div>
+  </section>
+
+  <!-- Multi-Select & Bulk Actions Bar -->
+  <section id="selection-bar" class="selection-bar hidden">
+    <div class="selection-left">
+      <label class="custom-checkbox-wrap" title="Select / Deselect all">
+        <input type="checkbox" id="check-select-all">
+        <span class="custom-checkbox-box"></span>
+      </label>
+      <span id="selected-count-label" class="selection-label">0 selected</span>
+    </div>
+    <div class="selection-actions">
+      <button id="btn-delete-selected-list" class="btn-bulk" title="Remove selected tasks from list">
+        <svg class="btn-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        <span>Remove from List</span>
+      </button>
+      <button id="btn-delete-selected-file" class="btn-bulk btn-bulk-danger" title="Delete selected files from disk and remove from list">
+        <svg class="btn-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        <span>Delete from Disk</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Downloads List Container -->
+  <main id="downloads-container" class="downloads-list">
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </div>
+      <p class="empty-text">No active downloads</p>
+      <p class="empty-subtext">Click "+ Add URL" or right-click any link to download with accelerated multi-streams.</p>
+    </div>
+  </main>
+
+  <!-- Add URL Modal -->
+  <div id="add-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Download</h2>
+        <button id="btn-close-modal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="input-url">Download URL <span class="required">*</span></label>
+          <input type="url" id="input-url" placeholder="https://example.com/largefile.zip" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="input-filename">Custom Filename (Optional)</label>
+          <input type="text" id="input-filename" placeholder="Auto-detected from URL or server">
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="select-connections">Connections</label>
+            <select id="select-connections">
+              <option value="4">4 Parallel Streams</option>
+              <option value="8" selected>8 Streams (Recommended)</option>
+              <option value="16">16 Streams (High-Speed)</option>
+              <option value="32">32 Streams (Extreme)</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="select-scheduler">Scheduler</label>
+            <select id="select-scheduler">
+              <option value="aurora-ect" selected>AURORA ECT (Adaptive)</option>
+              <option value="largest-segment">Largest Segment (IDM)</option>
+              <option value="fixed">Fixed Partitioning</option>
+              <option value="single">Single Stream</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="input-checksum">Expected Checksum (Optional)</label>
+            <input type="text" id="input-checksum" placeholder="SHA-256 or BLAKE3 hash hex">
+          </div>
+          <div class="form-group flex-1">
+            <label for="select-algo">Hash Algo</label>
+            <select id="select-algo">
+              <option value="sha256" selected>SHA-256</option>
+              <option value="blake3">BLAKE3</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+        <button id="btn-submit-download" class="btn btn-primary">Start Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

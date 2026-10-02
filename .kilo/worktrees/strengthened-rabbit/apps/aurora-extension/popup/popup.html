@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURORA Kaushal IDM</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header Toolbar -->
+  <header class="header">
+    <div class="brand">
+      <img src="../icons/icon-48.png" alt="AURORA" class="logo">
+      <div>
+        <h1 class="title">AURORA <span class="badge-wasm">WASM</span></h1>
+        <p class="subtitle">Kaushal IDM v0.1.0</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btn-add-modal" class="btn btn-primary">+ Add URL</button>
+      <button id="btn-clear" class="btn btn-icon" title="Clear completed downloads">🧹</button>
+      <button id="btn-options" class="btn btn-icon" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Global Stats Bar -->
+  <section class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">Total Speed</span>
+      <span id="stat-total-speed" class="stat-value speed-highlight">0.00 MB/s</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Active Tasks</span>
+      <span id="stat-active-tasks" class="stat-value">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Engine</span>
+      <span class="stat-value text-blue">AURORA ECT</span>
+    </div>
+  </section>
+
+  <!-- Downloads List Container -->
+  <main id="downloads-container" class="downloads-list">
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">⚡</div>
+      <p class="empty-text">No active downloads</p>
+      <p class="empty-subtext">Click "+ Add URL" or right-click any link to download with accelerated multi-streams.</p>
+    </div>
+  </main>
+
+  <!-- Add URL Modal -->
+  <div id="add-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Download</h2>
+        <button id="btn-close-modal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="input-url">Download URL <span class="required">*</span></label>
+          <input type="url" id="input-url" placeholder="https://example.com/largefile.zip" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="input-filename">Custom Filename (Optional)</label>
+          <input type="text" id="input-filename" placeholder="Auto-detected from URL or server">
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="select-connections">Connections</label>
+            <select id="select-connections">
+              <option value="4">4 Parallel Streams</option>
+              <option value="8" selected>8 Streams (Recommended)</option>
+              <option value="16">16 Streams (High-Speed)</option>
+              <option value="32">32 Streams (Extreme)</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="select-scheduler">Scheduler</label>
+            <select id="select-scheduler">
+              <option value="aurora-ect" selected>AURORA ECT (Adaptive)</option>
+              <option value="largest-segment">Largest Segment (IDM)</option>
+              <option value="fixed">Fixed Partitioning</option>
+              <option value="single">Single Stream</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="input-checksum">Expected Checksum (Optional)</label>
+            <input type="text" id="input-checksum" placeholder="SHA-256 or BLAKE3 hash hex">
+          </div>
+          <div class="form-group flex-1">
+            <label for="select-algo">Hash Algo</label>
+            <select id="select-algo">
+              <option value="sha256" selected>SHA-256</option>
+              <option value="blake3">BLAKE3</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+        <button id="btn-submit-download" class="btn btn-primary">Start Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
