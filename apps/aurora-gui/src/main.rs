@@ -1,3 +1,6 @@
+// Suppress console window on Windows GUI releases
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod app;
 pub mod server;
 pub mod sorting;
@@ -16,6 +19,21 @@ use app::AuroraApp;
 use eframe::egui;
 use tracing_subscriber::EnvFilter;
 
+fn load_app_icon() -> Option<egui::IconData> {
+    let icon_bytes = include_bytes!("../resources/icon-128.png");
+    if let Ok(image) = image::load_from_memory(icon_bytes) {
+        let rgba = image.to_rgba8();
+        let (width, height) = rgba.dimensions();
+        Some(egui::IconData {
+            rgba: rgba.into_raw(),
+            width,
+            height,
+        })
+    } else {
+        None
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), eframe::Error> {
     tracing_subscriber::fmt()
@@ -24,11 +42,17 @@ async fn main() -> Result<(), eframe::Error> {
         )
         .init();
 
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([980.0, 620.0])
+        .with_min_inner_size([720.0, 440.0])
+        .with_title("AURORA Kaushal Download Manager");
+
+    if let Some(icon) = load_app_icon() {
+        viewport = viewport.with_icon(icon);
+    }
+
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([960.0, 600.0])
-            .with_min_inner_size([700.0, 420.0])
-            .with_title("AURORA Kaushal Download Manager"),
+        viewport,
         ..Default::default()
     };
 
@@ -36,7 +60,6 @@ async fn main() -> Result<(), eframe::Error> {
         "AURORA Kaushal Download Manager",
         native_options,
         Box::new(|cc| {
-            // Apply extension-matched sleek macOS / Modern Web dark visuals
             theme::configure_visuals(&cc.egui_ctx);
             Ok(Box::new(AuroraApp::new(cc)))
         }),

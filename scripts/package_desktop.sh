@@ -224,52 +224,85 @@ if [[ -f "${WIN_BIN}" ]]; then
 
   cp "${WIN_BIN}" "${WIN_ROOT}/${BIN_NAME}.exe"
   x86_64-w64-mingw32-strip "${WIN_ROOT}/${BIN_NAME}.exe" 2>/dev/null || true
+  cp "${ROOT_DIR}/apps/aurora-gui/resources/icon.ico" "${WIN_ROOT}/icon.ico"
   cp "${ROOT_DIR}/apps/aurora-extension/icons/icon-128.png" "${WIN_ROOT}/icon.png"
 
-  # Windows Clean Installer
+  # Windows Clean One-Click Installer (.bat)
   cat << 'EOF' > "${WIN_ROOT}/install.bat"
 @echo off
+title AURORA Kaushal IDM Setup
+set "INSTALL_DIR=%LOCALAPPDATA%\Programs\AuroraIDM"
+
 echo ========================================================
-echo  AURORA Kaushal IDM - Windows Clean Installer
+echo  AURORA Kaushal IDM - High-Speed Download Manager Setup
 echo ========================================================
-echo [1/3] Terminating existing running instances...
+echo [1/4] Terminating existing running instances...
 taskkill /F /IM aurora-gui.exe 2>nul
 timeout /t 1 /nobreak >nul
 
-set "INSTALL_DIR=%LOCALAPPDATA%\Programs\AuroraIDM"
-echo [2/3] Cleaning previous installation at %INSTALL_DIR%...
+echo [2/4] Cleaning previous installation...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
 mkdir "%INSTALL_DIR%"
 
+echo [3/4] Copying application files and icons...
 copy /y "%~dp0aurora-gui.exe" "%INSTALL_DIR%\" >nul
+copy /y "%~dp0icon.ico" "%INSTALL_DIR%\" >nul 2>nul
 copy /y "%~dp0icon.png" "%INSTALL_DIR%\" >nul 2>nul
 copy /y "%~dp0uninstall.bat" "%INSTALL_DIR%\" >nul
 
-echo [3/3] Creating Desktop shortcut...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AURORA Kaushal IDM.lnk')); $s.TargetPath = '%INSTALL_DIR%\aurora-gui.exe'; $s.WorkingDirectory = '%INSTALL_DIR%'; $s.Save()"
+echo [4/4] Creating Desktop and Start Menu shortcuts with icon...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ws = New-Object -ComObject WScript.Shell; " ^
+  "$desk = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'AURORA Kaushal IDM.lnk'); " ^
+  "$s = $ws.CreateShortcut($desk); " ^
+  "$s.TargetPath = '%INSTALL_DIR%\aurora-gui.exe'; " ^
+  "$s.WorkingDirectory = '%INSTALL_DIR%'; " ^
+  "$s.IconLocation = '%INSTALL_DIR%\icon.ico,0'; " ^
+  "$s.Save(); " ^
+  "$startDir = [System.IO.Path]::Combine([Environment]::GetFolderPath('Programs'), 'AURORA Kaushal IDM'); " ^
+  "if (!(Test-Path $startDir)) { New-Item -ItemType Directory -Path $startDir | Out-Null }; " ^
+  "$s2 = $ws.CreateShortcut([System.IO.Path]::Combine($startDir, 'AURORA Kaushal IDM.lnk')); " ^
+  "$s2.TargetPath = '%INSTALL_DIR%\aurora-gui.exe'; " ^
+  "$s2.WorkingDirectory = '%INSTALL_DIR%'; " ^
+  "$s2.IconLocation = '%INSTALL_DIR%\icon.ico,0'; " ^
+  "$s2.Save()"
 
 echo.
 echo ========================================================
-echo  SUCCESS: AURORA Kaushal IDM is installed and ready!
+echo  SUCCESS: AURORA Kaushal IDM installed successfully!
+echo  Launching application...
 echo ========================================================
-pause
+start "" "%INSTALL_DIR%\aurora-gui.exe"
+timeout /t 2 /nobreak >nul
+exit
+EOF
+
+  # Windows Silent VBS Installer (Zero CMD window popup)
+  cat << 'EOF' > "${WIN_ROOT}/setup.vbs"
+Set WshShell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+currentDir = fso.GetParentFolderName(WScript.ScriptFullName)
+batPath = currentDir & "\install.bat"
+WshShell.Run """" & batPath & """", 0, True
 EOF
 
   # Windows Clean Uninstaller
   cat << 'EOF' > "${WIN_ROOT}/uninstall.bat"
 @echo off
+title AURORA Kaushal IDM Uninstaller
+set "INSTALL_DIR=%LOCALAPPDATA%\Programs\AuroraIDM"
+
 echo ========================================================
-echo  AURORA Kaushal IDM - Windows Uninstaller
+echo  AURORA Kaushal IDM - Uninstaller
 echo ========================================================
 echo [1/2] Terminating running aurora-gui.exe instances...
 taskkill /F /IM aurora-gui.exe 2>nul
 timeout /t 1 /nobreak >nul
 
-set "INSTALL_DIR=%LOCALAPPDATA%\Programs\AuroraIDM"
-echo [2/2] Deleting installation files and shortcuts...
+echo [2/2] Deleting application files, cache, and shortcuts...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
 del /f /q "%USERPROFILE%\Desktop\AURORA Kaushal IDM.lnk" 2>nul
-del /f /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\AURORA Kaushal IDM.lnk" 2>nul
+rmdir /s /q "%APPDATA%\Microsoft\Windows\Start Menu\Programs\AURORA Kaushal IDM" 2>nul
 
 echo.
 echo ========================================================

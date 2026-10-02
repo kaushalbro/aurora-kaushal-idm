@@ -360,6 +360,7 @@ dependencies = [
  "chrono",
  "eframe",
  "egui",
+ "image",
  "serde",
  "serde_json",
  "tokio",
