@@ -362,67 +362,136 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function createSvg(viewBox, width, height, elements, extraAttrs = {}) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', viewBox);
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  for (const [k, v] of Object.entries(extraAttrs)) {
+    svg.setAttribute(k, v);
+  }
+  for (const el of elements) {
+    const node = document.createElementNS('http://www.w3.org/2000/svg', el.tag);
+    for (const [k, v] of Object.entries(el.attrs || {})) {
+      node.setAttribute(k, v);
+    }
+    svg.appendChild(node);
+  }
+  return svg;
+}
+
 function createDownloadCard(task) {
   const card = document.createElement('div');
   card.id = `card-${task.id}`;
   card.className = 'download-card';
 
-  const safeFilename = escapeHtml(task.filename || 'download');
-  const safeUrl = escapeHtml(task.url || '');
+  // Card Top
+  const cardTop = document.createElement('div');
+  cardTop.className = 'card-top';
 
-  card.innerHTML = `
-    <div class="card-top">
-      <div class="card-select-wrap">
-        <label class="custom-checkbox-wrap" title="Select download">
-          <input type="checkbox" class="card-checkbox" data-id="${task.id}">
-          <span class="custom-checkbox-box"></span>
-        </label>
-      </div>
-      <div class="file-info">
-        <div class="filename" title="${safeFilename}">${safeFilename}</div>
-        <div class="url-sub" title="${safeUrl}">${safeUrl}</div>
-      </div>
-      <div class="card-actions">
-        <button class="btn-card btn-copy-url" data-url="${safeUrl}" title="Copy download link">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-          </svg>
-        </button>
-        <button class="btn-card btn-open-file" data-id="${task.id}" data-download-id="${task.downloadId || ''}" title="Show in folder (File Explorer)">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-        </button>
-        <button class="btn-card btn-pause-resume" data-id="${task.id}" title="Action"></button>
-        <button class="btn-card btn-remove-list" data-id="${task.id}" title="Remove from list">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-        <button class="btn-card btn-card-danger btn-delete-disk" data-id="${task.id}" title="Delete file from disk and list">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        </button>
-      </div>
-    </div>
+  // Checkbox wrap
+  const selectWrap = document.createElement('div');
+  selectWrap.className = 'card-select-wrap';
+  const labelWrap = document.createElement('label');
+  labelWrap.className = 'custom-checkbox-wrap';
+  labelWrap.title = 'Select download';
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'card-checkbox';
+  checkbox.dataset.id = task.id;
+  const checkboxBox = document.createElement('span');
+  checkboxBox.className = 'custom-checkbox-box';
+  labelWrap.append(checkbox, checkboxBox);
+  selectWrap.appendChild(labelWrap);
 
-    <div class="progress-container">
-      <div class="progress-bar" style="width: ${task.progressPct || 0}%"></div>
-    </div>
+  // File info
+  const fileInfo = document.createElement('div');
+  fileInfo.className = 'file-info';
+  const fnDiv = document.createElement('div');
+  fnDiv.className = 'filename';
+  fnDiv.title = task.filename || 'download';
+  fnDiv.textContent = task.filename || 'download';
+  const urlSub = document.createElement('div');
+  urlSub.className = 'url-sub';
+  urlSub.title = task.url || '';
+  urlSub.textContent = task.url || '';
+  fileInfo.append(fnDiv, urlSub);
 
-    <div class="card-meta">
-      <span class="meta-size">${formatBytes(task.downloadedBytes)} / ${task.totalBytes ? formatBytes(task.totalBytes) : 'Unknown'} (${(task.progressPct || 0).toFixed(1)}%)</span>
-      <span class="meta-speed">${task.status === 'Downloading' ? formatSpeed(task.speedBytesPerSec) : ''}</span>
-      <span class="status-badge status-${task.status.toLowerCase()}">${task.status}</span>
-    </div>
+  // Card actions
+  const cardActions = document.createElement('div');
+  cardActions.className = 'card-actions';
 
-    <div class="segment-map"></div>
-  `;
+  const btnCopyUrl = document.createElement('button');
+  btnCopyUrl.className = 'btn-card btn-copy-url';
+  btnCopyUrl.dataset.url = task.url || '';
+  btnCopyUrl.title = 'Copy download link';
+  btnCopyUrl.appendChild(createSvg('0 0 24 24', 12, 12, [
+    { tag: 'path', attrs: { d: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' } },
+    { tag: 'path', attrs: { d: 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' } }
+  ], { fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+
+  const btnOpenFile = document.createElement('button');
+  btnOpenFile.className = 'btn-card btn-open-file';
+  btnOpenFile.dataset.id = task.id;
+  btnOpenFile.dataset.downloadId = task.downloadId || '';
+  btnOpenFile.title = 'Show in folder (File Explorer)';
+  btnOpenFile.appendChild(createSvg('0 0 24 24', 12, 12, [
+    { tag: 'path', attrs: { d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z' } }
+  ], { fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+
+  const btnPauseResume = document.createElement('button');
+  btnPauseResume.className = 'btn-card btn-pause-resume';
+  btnPauseResume.dataset.id = task.id;
+  btnPauseResume.title = 'Action';
+
+  const btnRemoveList = document.createElement('button');
+  btnRemoveList.className = 'btn-card btn-remove-list';
+  btnRemoveList.dataset.id = task.id;
+  btnRemoveList.title = 'Remove from list';
+  btnRemoveList.appendChild(createSvg('0 0 24 24', 11, 11, [
+    { tag: 'line', attrs: { x1: '18', y1: '6', x2: '6', y2: '18' } },
+    { tag: 'line', attrs: { x1: '6', y1: '6', x2: '18', y2: '18' } }
+  ], { fill: 'none', stroke: 'currentColor', 'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+
+  const btnDeleteDisk = document.createElement('button');
+  btnDeleteDisk.className = 'btn-card btn-card-danger btn-delete-disk';
+  btnDeleteDisk.dataset.id = task.id;
+  btnDeleteDisk.title = 'Delete file from disk and list';
+  btnDeleteDisk.appendChild(createSvg('0 0 24 24', 11, 11, [
+    { tag: 'polyline', attrs: { points: '3 6 5 6 21 6' } },
+    { tag: 'path', attrs: { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' } }
+  ], { fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+
+  cardActions.append(btnCopyUrl, btnOpenFile, btnPauseResume, btnRemoveList, btnDeleteDisk);
+  cardTop.append(selectWrap, fileInfo, cardActions);
+
+  // Progress Bar Container
+  const progContainer = document.createElement('div');
+  progContainer.className = 'progress-container';
+  const progBar = document.createElement('div');
+  progBar.className = 'progress-bar';
+  progBar.style.width = `${task.progressPct || 0}%`;
+  progContainer.appendChild(progBar);
+
+  // Card Meta
+  const cardMeta = document.createElement('div');
+  cardMeta.className = 'card-meta';
+  const metaSize = document.createElement('span');
+  metaSize.className = 'meta-size';
+  const metaSpeed = document.createElement('span');
+  metaSpeed.className = 'meta-speed';
+  const statusBadge = document.createElement('span');
+  statusBadge.className = `status-badge status-${task.status.toLowerCase()}`;
+  statusBadge.textContent = task.status;
+  cardMeta.append(metaSize, metaSpeed, statusBadge);
+
+  // Segment Map
+  const segmentMap = document.createElement('div');
+  segmentMap.className = 'segment-map';
+
+  card.append(cardTop, progContainer, cardMeta, segmentMap);
 
   // Attach button & checkbox event listeners
-  const checkbox = card.querySelector('.card-checkbox');
-  const btnCopyUrl = card.querySelector('.btn-copy-url');
-  const btnOpenFile = card.querySelector('.btn-open-file');
-  const btnPauseResume = card.querySelector('.btn-pause-resume');
-  const btnRemoveList = card.querySelector('.btn-remove-list');
-  const btnDeleteDisk = card.querySelector('.btn-delete-disk');
-
   checkbox.addEventListener('change', (e) => {
     if (e.target.checked) {
       selectedTaskIds.add(task.id);
@@ -481,15 +550,23 @@ function updateDownloadCard(card, task) {
 
   btnPauseResume.dataset.status = task.status;
   if (task.status === 'Downloading') {
-    btnPauseResume.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>';
+    btnPauseResume.replaceChildren(createSvg('0 0 24 24', 11, 11, [
+      { tag: 'rect', attrs: { x: '6', y: '4', width: '4', height: '16', rx: '1' } },
+      { tag: 'rect', attrs: { x: '14', y: '4', width: '4', height: '16', rx: '1' } }
+    ], { fill: 'currentColor' }));
     btnPauseResume.title = 'Pause';
     btnPauseResume.style.display = 'inline-flex';
   } else if (task.status === 'Paused') {
-    btnPauseResume.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+    btnPauseResume.replaceChildren(createSvg('0 0 24 24', 11, 11, [
+      { tag: 'polygon', attrs: { points: '5 3 19 12 5 21 5 3' } }
+    ], { fill: 'currentColor' }));
     btnPauseResume.title = 'Resume';
     btnPauseResume.style.display = 'inline-flex';
   } else if (task.status === 'Failed') {
-    btnPauseResume.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>';
+    btnPauseResume.replaceChildren(createSvg('0 0 24 24', 11, 11, [
+      { tag: 'polyline', attrs: { points: '1 4 1 10 7 10' } },
+      { tag: 'path', attrs: { d: 'M3.51 15a9 9 0 1 0 2.13-9.36L1 10' } }
+    ], { fill: 'none', stroke: 'currentColor', 'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
     btnPauseResume.title = 'Retry';
     btnPauseResume.style.display = 'inline-flex';
   } else {
@@ -499,7 +576,7 @@ function updateDownloadCard(card, task) {
   // Render segment map blocks if multi-segment
   if (task.segments && task.segments.length > 0 && task.totalBytes) {
     segmentMap.style.display = 'flex';
-    segmentMap.innerHTML = '';
+    segmentMap.replaceChildren();
 
     task.segments.forEach(seg => {
       const segBlock = document.createElement('div');
@@ -708,20 +785,31 @@ function openDownloadedFile(taskId, downloadIdStr) {
   }
 }
 
+function showCopiedIndicator(btnEl) {
+  if (!btnEl) return;
+  const originalTitle = btnEl.title;
+  const checkSvg = createSvg('0 0 24 24', 12, 12, [
+    { tag: 'polyline', attrs: { points: '20 6 9 17 4 12' } }
+  ], { fill: 'none', stroke: '#34c759', 'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+  
+  const copySvg = createSvg('0 0 24 24', 12, 12, [
+    { tag: 'path', attrs: { d: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' } },
+    { tag: 'path', attrs: { d: 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' } }
+  ], { fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+
+  btnEl.replaceChildren(checkSvg);
+  btnEl.title = 'Link copied!';
+  setTimeout(() => {
+    btnEl.replaceChildren(copySvg);
+    btnEl.title = originalTitle;
+  }, 1500);
+}
+
 async function copyTaskUrl(url, btnEl) {
   if (!url) return;
   try {
     await navigator.clipboard.writeText(url);
-    if (btnEl) {
-      const originalHtml = btnEl.innerHTML;
-      const originalTitle = btnEl.title;
-      btnEl.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-      btnEl.title = 'Link copied!';
-      setTimeout(() => {
-        btnEl.innerHTML = originalHtml;
-        btnEl.title = originalTitle;
-      }, 1500);
-    }
+    showCopiedIndicator(btnEl);
   } catch (err) {
     console.error('[AURORA] Failed to copy URL via clipboard API, trying execCommand fallback:', err);
     try {
@@ -734,16 +822,7 @@ async function copyTaskUrl(url, btnEl) {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      if (btnEl) {
-        const originalHtml = btnEl.innerHTML;
-        const originalTitle = btnEl.title;
-        btnEl.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-        btnEl.title = 'Link copied!';
-        setTimeout(() => {
-          btnEl.innerHTML = originalHtml;
-          btnEl.title = originalTitle;
-        }, 1500);
-      }
+      showCopiedIndicator(btnEl);
     } catch (e) {
       console.error('[AURORA] Clipboard copy fallback failed:', e);
     }

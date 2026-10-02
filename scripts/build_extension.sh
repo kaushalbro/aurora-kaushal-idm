@@ -76,7 +76,10 @@ cat > "$FIREFOX_DIR/manifest.json" << EOF
   "browser_specific_settings": {
     "gecko": {
       "id": "aurora-kaushal-idm@nepal.org",
-      "strict_min_version": "109.0"
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "content_security_policy": {

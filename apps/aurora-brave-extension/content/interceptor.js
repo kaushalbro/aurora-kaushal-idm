@@ -130,7 +130,7 @@ function triggerFlyingFileToTop(filename, startX, startY) {
   const deltaX = targetX - startX;
   const deltaY = targetY - startY;
 
-  // 1. Create flying file element
+  // 1. Create flying file element safely with DOM APIs
   const flyingEl = document.createElement('div');
   flyingEl.className = 'aurora-flying-file';
   flyingEl.style.left = `${startX}px`;
@@ -138,20 +138,39 @@ function triggerFlyingFileToTop(filename, startX, startY) {
   flyingEl.style.setProperty('--delta-x', `${deltaX}px`);
   flyingEl.style.setProperty('--delta-y', `${deltaY}px`);
 
-  flyingEl.innerHTML = `
-    <div class="flying-file-card">
-      <div class="flying-file-doc">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-        </svg>
-      </div>
-      <div class="flying-file-badge">${escapeHtml(ext)}</div>
-    </div>
-  `;
+  const card = document.createElement('div');
+  card.className = 'flying-file-card';
 
+  const doc = document.createElement('div');
+  doc.className = 'flying-file-doc';
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '22');
+  svg.setAttribute('height', '22');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', '#007AFF');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+
+  const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p1.setAttribute('d', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z');
+  const p2 = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  p2.setAttribute('points', '14 2 14 8 20 8');
+  const p3 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  p3.setAttribute('x1', '16'); p3.setAttribute('y1', '13'); p3.setAttribute('x2', '8'); p3.setAttribute('y2', '13');
+  const p4 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  p4.setAttribute('x1', '16'); p4.setAttribute('y1', '17'); p4.setAttribute('x2', '8'); p4.setAttribute('y2', '17');
+  svg.append(p1, p2, p3, p4);
+  doc.appendChild(svg);
+
+  const badge = document.createElement('div');
+  badge.className = 'flying-file-badge';
+  badge.textContent = ext;
+
+  card.append(doc, badge);
+  flyingEl.appendChild(card);
   document.body.appendChild(flyingEl);
 
   // 2. Remove flying file and open top-right download panel after flight
@@ -167,51 +186,109 @@ function showTopRightDownloadPanel(filename, ext) {
 
   const container = document.createElement('div');
   container.id = 'aurora-top-panel-container';
-  container.innerHTML = `
-    <div class="aurora-top-panel">
-      <!-- Target Catch Bucket Header -->
-      <div class="aurora-panel-top">
-        <div class="aurora-panel-brand">
-          <div class="aurora-bucket-landing">
-            <svg viewBox="0 0 32 32" width="22" height="22">
-              <path class="bucket-tray" d="M6 18 L6 25 C6 26.5 7 27.5 8.5 27.5 L23.5 27.5 C25 27.5 26 26.5 26 25 L26 18" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" fill="none" />
-              <polyline points="10,13 16,19 22,13" fill="none" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-              <line x1="16" y1="5" x2="16" y2="19" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" />
-            </svg>
-          </div>
-          <span class="aurora-panel-title">Aurora Kaushal Download Manager - Nepal</span>
-        </div>
-        <div class="aurora-panel-actions">
-          <span class="aurora-status-pill">Active</span>
-          <button class="aurora-btn-close" id="btn-close-aurora-panel">&times;</button>
-        </div>
-      </div>
 
-      <!-- File Details -->
-      <div class="aurora-panel-body">
-        <div class="aurora-panel-file-row">
-          <span class="aurora-ext-badge">${escapeHtml(ext)}</span>
-          <span class="aurora-filename-text" title="${escapeHtml(filename)}">${escapeHtml(filename)}</span>
-        </div>
-        <div class="aurora-panel-progress-wrap">
-          <div class="aurora-panel-progress-bar"></div>
-        </div>
-        <div class="aurora-panel-meta">
-          <span class="aurora-meta-msg">Accelerated Multi-Streams Downloading...</span>
-        </div>
-      </div>
-    </div>
-  `;
+  const panel = document.createElement('div');
+  panel.className = 'aurora-top-panel';
 
+  // Header
+  const panelTop = document.createElement('div');
+  panelTop.className = 'aurora-panel-top';
+
+  const brand = document.createElement('div');
+  brand.className = 'aurora-panel-brand';
+
+  const bucket = document.createElement('div');
+  bucket.className = 'aurora-bucket-landing';
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 32 32');
+  svg.setAttribute('width', '22');
+  svg.setAttribute('height', '22');
+
+  const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path1.setAttribute('class', 'bucket-tray');
+  path1.setAttribute('d', 'M6 18 L6 25 C6 26.5 7 27.5 8.5 27.5 L23.5 27.5 C25 27.5 26 26.5 26 25 L26 18');
+  path1.setAttribute('stroke', '#007AFF');
+  path1.setAttribute('stroke-width', '2.5');
+  path1.setAttribute('stroke-linecap', 'round');
+  path1.setAttribute('fill', 'none');
+
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  poly.setAttribute('points', '10,13 16,19 22,13');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke', '#007AFF');
+  poly.setAttribute('stroke-width', '2.5');
+  poly.setAttribute('stroke-linecap', 'round');
+  poly.setAttribute('stroke-linejoin', 'round');
+
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', '16'); line.setAttribute('y1', '5'); line.setAttribute('x2', '16'); line.setAttribute('y2', '19');
+  line.setAttribute('stroke', '#007AFF');
+  line.setAttribute('stroke-width', '2.5');
+  line.setAttribute('stroke-linecap', 'round');
+
+  svg.append(path1, poly, line);
+  bucket.appendChild(svg);
+
+  const title = document.createElement('span');
+  title.className = 'aurora-panel-title';
+  title.textContent = 'Aurora Kaushal Download Manager - Nepal';
+  brand.append(bucket, title);
+
+  const actions = document.createElement('div');
+  actions.className = 'aurora-panel-actions';
+
+  const pill = document.createElement('span');
+  pill.className = 'aurora-status-pill';
+  pill.textContent = 'Active';
+
+  const btnClose = document.createElement('button');
+  btnClose.className = 'aurora-btn-close';
+  btnClose.id = 'btn-close-aurora-panel';
+  btnClose.textContent = '×';
+  actions.append(pill, btnClose);
+
+  panelTop.append(brand, actions);
+
+  // File Details Body
+  const panelBody = document.createElement('div');
+  panelBody.className = 'aurora-panel-body';
+
+  const fileRow = document.createElement('div');
+  fileRow.className = 'aurora-panel-file-row';
+
+  const extBadge = document.createElement('span');
+  extBadge.className = 'aurora-ext-badge';
+  extBadge.textContent = ext;
+
+  const fnText = document.createElement('span');
+  fnText.className = 'aurora-filename-text';
+  fnText.title = filename;
+  fnText.textContent = filename;
+  fileRow.append(extBadge, fnText);
+
+  const progWrap = document.createElement('div');
+  progWrap.className = 'aurora-panel-progress-wrap';
+  const progBar = document.createElement('div');
+  progBar.className = 'aurora-panel-progress-bar';
+  progWrap.appendChild(progBar);
+
+  const meta = document.createElement('div');
+  meta.className = 'aurora-panel-meta';
+  const metaMsg = document.createElement('span');
+  metaMsg.className = 'aurora-meta-msg';
+  metaMsg.textContent = 'Accelerated Multi-Streams Downloading...';
+  meta.appendChild(metaMsg);
+
+  panelBody.append(fileRow, progWrap, meta);
+  panel.append(panelTop, panelBody);
+  container.appendChild(panel);
   document.body.appendChild(container);
 
-  const btnClose = container.querySelector('#btn-close-aurora-panel');
-  if (btnClose) {
-    btnClose.addEventListener('click', () => {
-      container.classList.add('aurora-panel-fadeout');
-      setTimeout(() => container.remove(), 300);
-    });
-  }
+  btnClose.addEventListener('click', () => {
+    container.classList.add('aurora-panel-fadeout');
+    setTimeout(() => container.remove(), 300);
+  });
 
   // Auto dismiss after 5s
   setTimeout(() => {
@@ -220,10 +297,4 @@ function showTopRightDownloadPanel(filename, ext) {
       setTimeout(() => container.remove(), 350);
     }
   }, 5000);
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str || '';
-  return div.innerHTML;
 }

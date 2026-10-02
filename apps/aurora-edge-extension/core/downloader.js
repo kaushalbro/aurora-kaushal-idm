@@ -28,15 +28,23 @@ export async function ensureWasmLoaded() {
  * Ensure Chrome Offscreen Document is created for DOM-based Blob Object URL handling
  */
 export async function ensureOffscreenDocument() {
-  if (typeof chrome === 'undefined' || !chrome.offscreen) return;
-  const offscreenUrl = chrome.runtime.getURL('offscreen/offscreen.html');
+  // Firefox and Safari do not use or require offscreen documents
+  const g = typeof globalThis !== 'undefined' ? globalThis : self;
+  const chromeApi = g.chrome;
+  if (!chromeApi || !chromeApi['offscreen']) return;
 
-  if (chrome.runtime.getContexts) {
-    const existingContexts = await chrome.runtime.getContexts({
-      contextTypes: ['OFFSCREEN_DOCUMENT'],
-      documentUrls: [offscreenUrl]
-    });
-    if (existingContexts && existingContexts.length > 0) return;
+  const runtimeApi = chromeApi['runtime'];
+  const offscreenApi = chromeApi['offscreen'];
+  const offscreenUrl = runtimeApi?.getURL ? runtimeApi.getURL('offscreen/offscreen.html') : '';
+
+  if (runtimeApi && typeof runtimeApi['getContexts'] === 'function') {
+    try {
+      const existingContexts = await runtimeApi['getContexts']({
+        contextTypes: ['OFFSCREEN_DOCUMENT'],
+        documentUrls: [offscreenUrl]
+      });
+      if (existingContexts && existingContexts.length > 0) return;
+    } catch (_) {}
   }
 
   if (offscreenCreating) {
@@ -46,12 +54,14 @@ export async function ensureOffscreenDocument() {
 
   offscreenCreating = (async () => {
     try {
-      await chrome.offscreen.createDocument({
-        url: 'offscreen/offscreen.html',
-        reasons: ['BLOBS'],
-        justification: 'Assemble downloaded files and trigger browser downloads'
-      });
-      console.log('[AURORA] Chrome Offscreen Document successfully created.');
+      if (typeof offscreenApi['createDocument'] === 'function') {
+        await offscreenApi['createDocument']({
+          url: 'offscreen/offscreen.html',
+          reasons: ['BLOBS'],
+          justification: 'Assemble downloaded files and trigger browser downloads'
+        });
+        console.log('[AURORA] Chrome Offscreen Document successfully created.');
+      }
     } catch (err) {
       if (!err.message?.includes('Only a single offscreen document may be created')) {
         console.warn('[AURORA] Could not create offscreen document:', err);
