@@ -73,6 +73,7 @@ Section "MainSection" SEC01
     ; 3. Install binary & icon assets
     DetailPrint "Extracting application binaries..."
     File "../target/x86_64-pc-windows-gnu/release/aurora-desktop.exe"
+    File "../target/x86_64-pc-windows-gnu/release/WebView2Loader.dll"
     File "../apps/aurora-desktop/src-tauri/icons/icon.ico"
     File "../apps/aurora-desktop/src-tauri/icons/128x128.png"
 
@@ -137,6 +138,7 @@ Section "Uninstall"
     ; 3. Delete Application Files
     DetailPrint "Deleting installed files..."
     Delete "$INSTDIR\aurora-desktop.exe"
+    Delete "$INSTDIR\WebView2Loader.dll"
     Delete "$INSTDIR\aurora-gui.exe"
     Delete "$INSTDIR\icon.ico"
     Delete "$INSTDIR\128x128.png"

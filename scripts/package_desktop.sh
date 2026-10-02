@@ -278,6 +278,9 @@ if [[ -f "${WIN_BIN}" ]]; then
 
   cp "${WIN_BIN}" "${WIN_ROOT}/aurora-desktop.exe"
   x86_64-w64-mingw32-strip "${WIN_ROOT}/aurora-desktop.exe" 2>/dev/null || true
+  if [[ -f "${TARGET_DIR}/x86_64-pc-windows-gnu/release/WebView2Loader.dll" ]]; then
+    cp "${TARGET_DIR}/x86_64-pc-windows-gnu/release/WebView2Loader.dll" "${WIN_ROOT}/WebView2Loader.dll"
+  fi
   cp "${ROOT_DIR}/apps/aurora-desktop/src-tauri/icons/icon.ico" "${WIN_ROOT}/icon.ico" 2>/dev/null || cp "${ROOT_DIR}/apps/aurora-gui/resources/icon.ico" "${WIN_ROOT}/icon.ico"
   cp "${ROOT_DIR}/apps/aurora-desktop/src-tauri/icons/128x128.png" "${WIN_ROOT}/icon.png" 2>/dev/null || true
 
@@ -299,8 +302,9 @@ echo [2/4] Cleaning previous installation...
 if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
 mkdir "%INSTALL_DIR%"
 
-echo [3/4] Copying application files and icons...
+echo [3/4] Copying application files, WebView2 dependencies, and icons...
 copy /y "%~dp0aurora-desktop.exe" "%INSTALL_DIR%\" >nul
+copy /y "%~dp0WebView2Loader.dll" "%INSTALL_DIR%\" >nul 2>nul
 copy /y "%~dp0icon.ico" "%INSTALL_DIR%\" >nul 2>nul
 copy /y "%~dp0icon.png" "%INSTALL_DIR%\" >nul 2>nul
 copy /y "%~dp0uninstall.bat" "%INSTALL_DIR%\" >nul

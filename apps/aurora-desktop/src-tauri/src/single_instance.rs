@@ -28,56 +28,48 @@ pub fn clean_download_url(raw: &str) -> Option<String> {
     }
 }
 
-#[cfg(unix)]
-fn get_socket_path() -> PathBuf {
-    std::env::temp_dir().join("aurora_kaushal_idm.sock")
-}
+const IPC_PORT: u16 = 41419;
 
 /// Check if another instance is already running.
 /// If running, pass CLI arguments and return `true` (caller should exit).
 /// If not running, return `false` (this process becomes primary).
 pub async fn send_to_existing_instance_if_running(args: &[String]) -> bool {
-    #[cfg(unix)]
-    {
-        use tokio::net::UnixStream;
-        let socket_path = get_socket_path();
-        if socket_path.exists() {
-            if let Ok(mut stream) = UnixStream::connect(&socket_path).await {
-                // An existing instance is listening!
-                let payload = serde_json::to_string(args).unwrap_or_default();
-                let _ = stream.write_all(payload.as_bytes()).await;
-                let _ = stream.flush().await;
-                return true;
-            } else {
-                // Stale socket file
-                let _ = std::fs::remove_file(&socket_path);
-            }
-        }
+    if let Ok(mut stream) = tokio::net::TcpStream::connect(("127.0.0.1", IPC_PORT)).await {
+        let payload = serde_json::to_string(args).unwrap_or_default();
+        let _ = stream.write_all(payload.as_bytes()).await;
+        let _ = stream.flush().await;
+        return true;
     }
     false
 }
 
 /// Start background listener for new instances attempting to pass URLs
 pub fn start_single_instance_listener(app_handle: AppHandle) {
-    #[cfg(unix)]
-    {
-        use tokio::net::UnixListener;
-        let socket_path = get_socket_path();
-        let _ = std::fs::remove_file(&socket_path);
-
-        tauri::async_runtime::spawn(async move {
-            if let Ok(listener) = UnixListener::bind(&socket_path) {
-                while let Ok((mut stream, _)) = listener.accept().await {
-                    let mut buf = Vec::new();
-                    if let Ok(_) = stream.read_to_end(&mut buf).await {
-                        if let Ok(args) = serde_json::from_slice::<Vec<String>>(&buf) {
-                            handle_incoming_args(&app_handle, &args);
+    tauri::async_runtime::spawn(async move {
+        if let Ok(listener) = tokio::net::TcpListener::bind(("127.0.0.1", IPC_PORT)).await {
+            while let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = Vec::new();
+                let mut chunk = [0u8; 4096];
+                loop {
+                    match stream.read(&mut chunk).await {
+                        Ok(0) => break,
+                        Ok(n) => {
+                            buf.extend_from_slice(&chunk[..n]);
+                            if n < chunk.len() {
+                                break;
+                            }
                         }
+                        Err(_) => break,
+                    }
+                }
+                if !buf.is_empty() {
+                    if let Ok(args) = serde_json::from_slice::<Vec<String>>(&buf) {
+                        handle_incoming_args(&app_handle, &args);
                     }
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 pub fn handle_incoming_args(app: &AppHandle, args: &[String]) {
