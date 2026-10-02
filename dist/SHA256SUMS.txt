@@ -1,0 +1,4 @@
+32f99b95d7d2f4af994dd0d6f520f533ddb9a87d964b2955b1c94339fc6697ab  aurora-kaushal-idm_0.1.0_amd64.deb
+61d3b437a4b933472ee7a816109d2e7adda1562470f4558398b00317724833db  aurora-kaushal-idm-v0.1.0-linux-x86_64.tar.gz
+54cd88a7bae4438346f709fe3daeb397fe37fce6abbf443f74822e9a39bdbb5e  aurora-kaushal-idm-v0.1.0-macos.zip
+338606bf8240793eaddb5c11c89bbc0b23ca1c69e8aaeba4950be6641f99d398  aurora-kaushal-idm-v0.1.0-windows-x64.zip
