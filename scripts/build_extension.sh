@@ -6,7 +6,12 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EXT_DIR="$ROOT_DIR/apps/aurora-extension"
 FIREFOX_DIR="$ROOT_DIR/apps/aurora-firefox-extension"
 DIST_DIR="$ROOT_DIR/dist"
-VERSION="0.2.0"
+
+# Source centralized .env configuration if present
+if [ -f "${ROOT_DIR}/.env" ]; then
+    export $(grep -v '^#' "${ROOT_DIR}/.env" | xargs -d '\n')
+fi
+VERSION="${AURORA_VERSION:-${VERSION:-0.3.0}}"
 
 echo "============================================================"
 echo " ⚡ AURORA Kaushal IDM - Dual Browser Extension Builder"
@@ -42,11 +47,11 @@ cp -r "$EXT_DIR/icons" "$FIREFOX_DIR/"
 cp -r "$EXT_DIR/pkg" "$FIREFOX_DIR/"
 
 # Create Firefox-optimized manifest.json
-cat > "$FIREFOX_DIR/manifest.json" << 'EOF'
+cat > "$FIREFOX_DIR/manifest.json" << EOF
 {
   "manifest_version": 3,
   "name": "Aurora Kaushal Download Manager - Nepal",
-  "version": "0.2.0",
+  "version": "${VERSION}",
   "description": "High-performance adaptive multi-connection download manager powered by pure WebAssembly and ECT scheduling.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -127,11 +132,11 @@ cp -r "$EXT_DIR/offscreen" "$SAFARI_DIR/"
 cp -r "$EXT_DIR/icons" "$SAFARI_DIR/"
 cp -r "$EXT_DIR/pkg" "$SAFARI_DIR/"
 
-cat > "$SAFARI_DIR/manifest.json" << 'EOF'
+cat > "$SAFARI_DIR/manifest.json" << EOF
 {
   "manifest_version": 3,
   "name": "Aurora Kaushal Download Manager - Nepal",
-  "version": "0.2.0",
+  "version": "${VERSION}",
   "description": "High-performance adaptive multi-connection download manager powered by pure WebAssembly and ECT scheduling.",
   "icons": {
     "16": "icons/icon-16.png",

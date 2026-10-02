@@ -18,7 +18,7 @@ impl Default for HttpClientConfig {
             read_timeout: Duration::from_secs(30),
             pool_max_idle_per_host: 64,
             pool_idle_timeout: Duration::from_secs(90),
-            user_agent: "AURORA/0.2.0 (Rust; High-Performance Engine)".to_string(),
+            user_agent: "AURORA/0.3.0 (Rust; High-Performance Engine)".to_string(),
         }
     }
 }

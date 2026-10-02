@@ -12,15 +12,33 @@ import glob
 import urllib.request
 import urllib.error
 
-REPO_OWNER = "kaushalbro"
-REPO_NAME = "aurora-kaushal-idm"
-TAG_NAME = "v0.2.0"
-RELEASE_TITLE = "AURORA Kaushal IDM v0.2.0 - Official Multi-Platform Release"
-
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 DIST_DIR = os.path.join(ROOT_DIR, "dist")
-RELEASE_NOTES_PATH = os.path.join(DIST_DIR, "RELEASE_NOTES_v0.2.0.md")
+
+def load_env_file():
+    env_path = os.path.join(ROOT_DIR, ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip().strip("\"'")
+                    if k not in os.environ:
+                        os.environ[k] = v
+
+load_env_file()
+
+VERSION_RAW = os.environ.get("AURORA_VERSION") or os.environ.get("VERSION") or "0.3.0"
+VERSION = VERSION_RAW if VERSION_RAW.startswith("v") else f"v{VERSION_RAW}"
+
+REPO_OWNER = os.environ.get("REPO_OWNER", "kaushalbro")
+REPO_NAME = os.environ.get("REPO_NAME", "aurora-kaushal-idm")
+TAG_NAME = VERSION
+RELEASE_TITLE = f"AURORA Kaushal IDM {VERSION} - Official Modern Multi-Platform Release"
+RELEASE_NOTES_PATH = os.path.join(DIST_DIR, f"RELEASE_NOTES_{VERSION}.md")
 
 
 def get_token():
@@ -59,6 +77,23 @@ def make_request(url, method="GET", data=None, headers=None):
         return 500, str(e).encode()
 
 
+def delete_old_releases(token):
+    auth_headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "AURORA-Release-Uploader/1.0"
+    }
+    url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases"
+    status, body = make_request(url, headers=auth_headers)
+    if status == 200:
+        releases = json.loads(body.decode("utf-8"))
+        for rel in releases:
+            if rel.get("tag_name") != TAG_NAME:
+                print(f"🗑️ Deleting old release '{rel.get('tag_name')}' (ID: {rel['id']})...")
+                del_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/{rel['id']}"
+                make_request(del_url, method="DELETE", headers=auth_headers)
+
+
 def get_or_create_release(token):
     auth_headers = {
         "Authorization": f"Bearer {token}",
@@ -70,11 +105,6 @@ def get_or_create_release(token):
     url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/tags/{TAG_NAME}"
     status, body = make_request(url, headers=auth_headers)
 
-    if status == 200:
-        release_data = json.loads(body.decode("utf-8"))
-        print(f"✅ Found existing release for tag '{TAG_NAME}' (ID: {release_data['id']})")
-        return release_data
-
     # 2. Read release notes
     notes = ""
     if os.path.exists(RELEASE_NOTES_PATH):
@@ -82,6 +112,19 @@ def get_or_create_release(token):
             notes = f.read()
     else:
         notes = f"Official Multi-Platform release of AURORA Kaushal IDM {TAG_NAME}."
+
+    if status == 200:
+        release_data = json.loads(body.decode("utf-8"))
+        print(f"✅ Found existing release for tag '{TAG_NAME}' (ID: {release_data['id']})")
+        # Update release notes
+        update_url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/{release_data['id']}"
+        payload = json.dumps({
+            "name": RELEASE_TITLE,
+            "body": notes,
+        }).encode("utf-8")
+        auth_headers["Content-Type"] = "application/json"
+        make_request(update_url, method="PATCH", data=payload, headers=auth_headers)
+        return release_data
 
     # 3. Create new release
     print(f"Creating new GitHub Release '{RELEASE_TITLE}' for tag '{TAG_NAME}'...")
@@ -164,30 +207,20 @@ def main():
         sys.exit(1)
 
     token = get_token()
+    delete_old_releases(token)
     release_data = get_or_create_release(token)
     release_id = release_data["id"]
 
-    # Collect desktop packages only (excluding browser extensions)
-    patterns = [
-        "aurora-kaushal-idm*.deb",
-        "aurora-kaushal-idm*windows*.zip",
-        "aurora-kaushal-idm*macos*.zip",
-        "aurora-kaushal-idm*.tar.gz",
-        "SHA256SUMS.txt"
-    ]
-
-    files_to_upload = []
-    for pattern in patterns:
-        files_to_upload.extend(glob.glob(os.path.join(DIST_DIR, pattern)))
-
-    # Ensure no extension files are included
+    # Collect all release files from dist
     files_to_upload = [
-        f for f in sorted(list(set(files_to_upload)))
-        if not any(ext in os.path.basename(f) for ext in ["chrome", "brave", "edge", "firefox", "safari", ".xpi"])
+        os.path.join(DIST_DIR, f) for f in os.listdir(DIST_DIR)
+        if os.path.isfile(os.path.join(DIST_DIR, f)) and not f.startswith("RELEASE_NOTES")
     ]
+
+    files_to_upload.sort()
 
     if not files_to_upload:
-        print("❌ No desktop application files found in dist/ to upload.")
+        print("❌ No distribution files found in dist/ to upload.")
         sys.exit(1)
 
     print(f"\nFound {len(files_to_upload)} release files in dist/:\n")

@@ -3,12 +3,14 @@
 ; Produces: dist/aurora-kaushal-idm-v0.2.0-setup.exe
 ; ==============================================================================
 
+!ifndef PRODUCT_VERSION
+!define PRODUCT_VERSION "0.3.0"
+!endif
 !define PRODUCT_NAME "AURORA IDM"
 !define PRODUCT_FULL_NAME "AURORA Kaushal IDM"
-!define PRODUCT_VERSION "0.2.0"
 !define PRODUCT_PUBLISHER "AURORA Development Team"
 !define PRODUCT_WEB_SITE "https://github.com/kaushalbro/aurora-kaushal-idm"
-!define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\aurora-gui.exe"
+!define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\aurora-desktop.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "HKCU"
 
@@ -25,8 +27,8 @@ RequestExecutionLevel user
 
 ; MUI Settings
 !define MUI_ABORTWARNING
-!define MUI_ICON "../apps/aurora-gui/resources/icon.ico"
-!define MUI_UNICON "../apps/aurora-gui/resources/icon.ico"
+!define MUI_ICON "../apps/aurora-desktop/src-tauri/icons/icon.ico"
+!define MUI_UNICON "../apps/aurora-desktop/src-tauri/icons/icon.ico"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME
@@ -34,7 +36,7 @@ RequestExecutionLevel user
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish page with option to run app immediately
-!define MUI_FINISHPAGE_RUN "$INSTDIR\aurora-gui.exe"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\aurora-desktop.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch AURORA IDM now"
 !insertmacro MUI_PAGE_FINISH
 
@@ -60,6 +62,7 @@ ShowUnInstDetails show
 Section "MainSection" SEC01
     ; 1. Terminate any running instances before overwriting
     DetailPrint "Terminating running AURORA instances..."
+    ExecWait 'taskkill /F /IM aurora-desktop.exe' $0
     ExecWait 'taskkill /F /IM aurora-gui.exe' $0
     Sleep 500
 
@@ -69,19 +72,19 @@ Section "MainSection" SEC01
 
     ; 3. Install binary & icon assets
     DetailPrint "Extracting application binaries..."
-    File "../target/x86_64-pc-windows-gnu/release/aurora-gui.exe"
-    File "../apps/aurora-gui/resources/icon.ico"
-    File "../apps/aurora-gui/resources/icon-128.png"
+    File "../target/x86_64-pc-windows-gnu/release/aurora-desktop.exe"
+    File "../apps/aurora-desktop/src-tauri/icons/icon.ico"
+    File "../apps/aurora-desktop/src-tauri/icons/128x128.png"
 
     ; 4. Create Start Menu Shortcuts
     DetailPrint "Creating Start Menu shortcuts..."
     CreateDirectory "$SMPROGRAMS\AURORA IDM"
-    CreateShortCut "$SMPROGRAMS\AURORA IDM\AURORA IDM.lnk" "$INSTDIR\aurora-gui.exe" "" "$INSTDIR\icon.ico" 0
+    CreateShortCut "$SMPROGRAMS\AURORA IDM\AURORA IDM.lnk" "$INSTDIR\aurora-desktop.exe" "" "$INSTDIR\icon.ico" 0
     CreateShortCut "$SMPROGRAMS\AURORA IDM\Uninstall AURORA IDM.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
 
     ; 5. Create Desktop Shortcut with Icon
     DetailPrint "Creating Desktop shortcut..."
-    CreateShortCut "$DESKTOP\AURORA IDM.lnk" "$INSTDIR\aurora-gui.exe" "" "$INSTDIR\icon.ico" 0
+    CreateShortCut "$DESKTOP\AURORA IDM.lnk" "$INSTDIR\aurora-desktop.exe" "" "$INSTDIR\icon.ico" 0
 
     ; 6. Write Uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -97,11 +100,16 @@ Section "MainSection" SEC01
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoModify" 1
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoRepair" 1
 
-    ; Register custom URI scheme for browser extension integration
+    ; Register custom URI scheme for browser integration
     WriteRegStr HKCU "Software\Classes\aurora" "" "URL:AURORA Protocol"
     WriteRegStr HKCU "Software\Classes\aurora" "URL Protocol" ""
     WriteRegStr HKCU "Software\Classes\aurora\DefaultIcon" "" "$INSTDIR\icon.ico"
-    WriteRegStr HKCU "Software\Classes\aurora\shell\open\command" "" '"$INSTDIR\aurora-gui.exe" "%1"'
+    WriteRegStr HKCU "Software\Classes\aurora\shell\open\command" "" '"$INSTDIR\aurora-desktop.exe" "%1"'
+
+    WriteRegStr HKCU "Software\Classes\auroradl" "" "URL:AURORA DL Protocol"
+    WriteRegStr HKCU "Software\Classes\auroradl" "URL Protocol" ""
+    WriteRegStr HKCU "Software\Classes\auroradl\DefaultIcon" "" "$INSTDIR\icon.ico"
+    WriteRegStr HKCU "Software\Classes\auroradl\shell\open\command" "" '"$INSTDIR\aurora-desktop.exe" "%1"'
 
     ; Save install dir
     WriteRegStr HKCU "Software\AURORA IDM" "InstallDir" "$INSTDIR"
@@ -113,6 +121,7 @@ SectionEnd
 Section "Uninstall"
     ; 1. Terminate running process
     DetailPrint "Closing running instances..."
+    ExecWait 'taskkill /F /IM aurora-desktop.exe' $0
     ExecWait 'taskkill /F /IM aurora-gui.exe' $0
     Sleep 500
 
@@ -127,8 +136,10 @@ Section "Uninstall"
 
     ; 3. Delete Application Files
     DetailPrint "Deleting installed files..."
+    Delete "$INSTDIR\aurora-desktop.exe"
     Delete "$INSTDIR\aurora-gui.exe"
     Delete "$INSTDIR\icon.ico"
+    Delete "$INSTDIR\128x128.png"
     Delete "$INSTDIR\icon-128.png"
     Delete "$INSTDIR\icon.png"
     Delete "$INSTDIR\uninstall.bat"
@@ -139,6 +150,7 @@ Section "Uninstall"
     DetailPrint "Removing registry entries..."
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
     DeleteRegKey HKCU "Software\Classes\aurora"
+    DeleteRegKey HKCU "Software\Classes\auroradl"
     DeleteRegKey HKCU "Software\AURORA IDM"
 
     SetAutoClose true

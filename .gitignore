@@ -1,3 +1,4 @@
 release/
 target/
 apps/aurora-desktop/node_modules
+.env
