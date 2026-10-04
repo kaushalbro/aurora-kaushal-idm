@@ -22,7 +22,10 @@ impl FixedSegmentScheduler {
 
     /// Generates N fixed static byte ranges partitioning total_bytes.
     pub fn partition_fixed_ranges(total_bytes: u64, parts: usize) -> Vec<ByteRange> {
-        let parts = parts.max(1) as u64;
+        if total_bytes == 0 {
+            return Vec::new();
+        }
+        let parts = (parts.max(1) as u64).min(total_bytes);
         let chunk_size = total_bytes / parts;
         let mut ranges = Vec::with_capacity(parts as usize);
 
@@ -57,5 +60,27 @@ impl Scheduler for FixedSegmentScheduler {
 
     fn reset(&mut self) {
         self.initialized = false;
+    }
+}
+
+#[cfg(test)]
+mod partition_tests {
+    use super::*;
+
+    #[test]
+    fn partitions_empty_and_tiny_files_without_underflow_or_overlap() {
+        assert!(FixedSegmentScheduler::partition_fixed_ranges(0, 8).is_empty());
+        for total in 1..33 {
+            for connections in [0, 1, 8, 32] {
+                let ranges = FixedSegmentScheduler::partition_fixed_ranges(total, connections);
+                let mut offset = 0;
+                for range in ranges {
+                    assert_eq!(range.start, offset);
+                    assert!(range.end >= range.start);
+                    offset = range.end + 1;
+                }
+                assert_eq!(offset, total);
+            }
+        }
     }
 }

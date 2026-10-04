@@ -76,3 +76,7 @@ cargo run --release --bin aurora-gui
 ## License
 
 Dual-licensed under MIT or Apache-2.0.
+
+## Optimization audit
+
+See [the optimization plan](OPTIMIZATION_PLAN.md) for the system audit, extension speed fixes, validation results, and prioritized technology upgrades.

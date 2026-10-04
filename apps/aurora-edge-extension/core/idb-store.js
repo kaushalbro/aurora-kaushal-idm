@@ -1,6 +1,6 @@
 /**
  * AURORA Kaushal IDM - IndexedDB Large Blob Store
- * Provides high-capacity, zero-copy blob storage shared between Service Worker & Offscreen documents.
+ * Provides blob storage shared between Service Worker and Offscreen documents.
  */
 
 const DB_NAME = 'aurora_idb_store';
@@ -39,10 +39,10 @@ export async function saveBlob(taskId, blob) {
     const store = tx.objectStore(STORE_NAME);
     const req = store.put(blob, taskId);
 
-    req.onsuccess = () => resolve(true);
+    // Resolve only after commit so the offscreen reader can see the blob.
     req.onerror = () => reject(req.error);
-    tx.oncomplete = () => db.close();
-    tx.onerror = () => {
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onabort = tx.onerror = () => {
       db.close();
       reject(tx.error);
     };
@@ -64,7 +64,7 @@ export async function getBlob(taskId) {
     req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
     tx.oncomplete = () => db.close();
-    tx.onerror = () => {
+    tx.onabort = tx.onerror = () => {
       db.close();
       reject(tx.error);
     };
@@ -82,10 +82,10 @@ export async function deleteBlob(taskId) {
     const store = tx.objectStore(STORE_NAME);
     const req = store.delete(taskId);
 
-    req.onsuccess = () => resolve(true);
+    // Resolve only after commit so the offscreen reader can see the blob.
     req.onerror = () => reject(req.error);
-    tx.oncomplete = () => db.close();
-    tx.onerror = () => {
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onabort = tx.onerror = () => {
       db.close();
       reject(tx.error);
     };

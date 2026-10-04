@@ -31,6 +31,9 @@ class PersistedTaskStub {
     this.downloadId = snapshot.downloadId || null;
     this.filename = snapshot.filename || 'download.bin';
     this.url = snapshot.url || '';
+    this.options = Object.fromEntries(['connections', 'schedulerType', 'checksum', 'hashAlgo']
+      .filter(key => snapshot[key] !== undefined).map(key => [key, snapshot[key]]));
+    this.restarting = false;
     this.totalBytes = snapshot.totalBytes || null;
     this.downloadedBytes = snapshot.downloadedBytes || 0;
     this.status = snapshot.status || 'Completed';
@@ -47,6 +50,7 @@ class PersistedTaskStub {
     return {
       id: this.id,
       downloadId: this.downloadId,
+      ...this.options,
       filename: this.filename,
       url: this.url,
       totalBytes: this.totalBytes,
@@ -63,7 +67,20 @@ class PersistedTaskStub {
   }
 
   pause() { this.status = 'Paused'; }
-  resume() {}
+  async resume() {
+    if (this.restarting || !['Paused', 'Failed'].includes(this.status)) return;
+    this.restarting = true;
+    try {
+      const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
+      if (this.status === 'Cancelled') return;
+      const id = await createDownloadTask(this.url, this.filename, { ...settings, ...this.options });
+      tasks.delete(this.id);
+      await persistTasks();
+      return id;
+    } finally {
+      this.restarting = false;
+    }
+  }
   cancel() { this.status = 'Cancelled'; }
 }
 
@@ -89,7 +106,7 @@ async function rehydrateTasks() {
     if (data && Array.isArray(data[STORAGE_KEY_TASKS])) {
       for (const snap of data[STORAGE_KEY_TASKS]) {
         if (snap && snap.id && !tasks.has(snap.id)) {
-          if (snap.status === 'Downloading' || snap.status === 'Probing' || snap.status === 'Assembling') {
+          if (snap.status === 'Downloading' || snap.status === 'Probing' || snap.status === 'Assembling' || snap.status === 'Verifying' || snap.status === 'Queued') {
             snap.status = 'Paused';
           }
           tasks.set(snap.id, new PersistedTaskStub(snap));
@@ -119,6 +136,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'aurora-keepalive') {
     updateBadge();
     checkKeepAliveAlarm();
+    persistTasks();
   }
 });
 
@@ -339,6 +357,8 @@ export function updateBadge() {
 
 // Handle messaging from Popup, Content Script, and Options
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Only the offscreen document owns these replies. A second response races it.
+  if (['CREATE_OBJECT_URL', 'SAVE_BLOB_DOWNLOAD', 'REVOKE_OBJECT_URL', 'OFFSCREEN_PING'].includes(message.action)) return false;
   (async () => {
     try {
       switch (message.action) {
@@ -386,7 +406,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'RESUME_DOWNLOAD': {
           const task = tasks.get(message.taskId);
           if (task) {
-            task.resume();
+            task.resume().catch(err => {
+              task.errorMessage = err.message;
+              task.status = 'Failed';
+              persistTasks();
+            });
             updateBadge();
             persistTasks();
             checkKeepAliveAlarm();

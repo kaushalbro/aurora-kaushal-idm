@@ -2,27 +2,33 @@
  * AURORA WebAssembly Download Coordinator & Stream Engine
  */
 import initWasm, { AuroraWasmEngine, compute_sha256, compute_blake3 } from '../pkg/aurora_wasm.js';
-import { saveBlob, deleteBlob } from './idb-store.js';
+import { saveBlob } from './idb-store.js';
 
 let wasmInitialized = false;
+let wasmLoading = null;
 let offscreenCreating = null;
 
 export async function ensureWasmLoaded() {
-  if (!wasmInitialized) {
-    try {
-      const wasmUrl = typeof chrome !== 'undefined' && chrome.runtime?.getURL
-        ? chrome.runtime.getURL('pkg/aurora_wasm_bg.wasm')
-        : './pkg/aurora_wasm_bg.wasm';
-      const res = await fetch(wasmUrl);
-      const bytes = await res.arrayBuffer();
-      await initWasm({ module_or_path: bytes });
-      wasmInitialized = true;
-      console.log('[AURORA] Rust WebAssembly Engine initialized with ArrayBuffer.');
-    } catch (err) {
-      console.warn('[AURORA] WebAssembly load fallback:', err);
-    }
+  if (wasmInitialized) return;
+  if (!wasmLoading) {
+    wasmLoading = (async () => {
+      try {
+        const wasmUrl = globalThis.chrome?.runtime?.getURL
+          ? chrome.runtime.getURL('pkg/aurora_wasm_bg.wasm')
+          : new URL('../pkg/aurora_wasm_bg.wasm', import.meta.url);
+        const res = await fetch(wasmUrl);
+        if (!res.ok) throw new Error(`WASM HTTP ${res.status}`);
+        await initWasm({ module_or_path: await res.arrayBuffer() });
+        wasmInitialized = true;
+      } catch (err) {
+        console.warn('[AURORA] WebAssembly load fallback:', err);
+      }
+    })().finally(() => { wasmLoading = null; });
   }
+  await wasmLoading;
 }
+
+class RangeUnsupportedError extends Error {}
 
 /**
  * Ensure Chrome Offscreen Document is created for DOM-based Blob Object URL handling
@@ -109,7 +115,7 @@ export class WasmDownloadTask {
     this.url = url;
     this.finalUrl = url;
     this.filename = filename || null;
-    this.connections = options.connections || 8;
+    this.connections = Math.min(32, Math.max(1, Number.parseInt(options.connections, 10) || 8));
     this.schedulerType = options.schedulerType || 'aurora-ect';
     this.checksum = options.checksum || null;
     this.hashAlgo = options.hashAlgo || 'sha256';
@@ -132,6 +138,8 @@ export class WasmDownloadTask {
     this.speedBytesPerSec = 0;
     this.etaSeconds = null;
     this.downloadId = null;
+    this.running = null;
+    this.speedSamples = [];
   }
 
   get status() {
@@ -149,9 +157,9 @@ export class WasmDownloadTask {
 
   async probe() {
     this.status = 'Probing';
+    let res = null;
     try {
       // Step 1: Probe server with HEAD or GET
-      let res = null;
       try {
         res = await fetch(this.url, {
           method: 'HEAD',
@@ -206,6 +214,10 @@ export class WasmDownloadTask {
         }
       }
 
+      if (res.headers.get('content-encoding') && res.headers.get('content-encoding') !== 'identity') {
+        this.acceptsRanges = false;
+        this.totalBytes = null; // Fetch exposes decoded bytes, not the encoded Content-Length.
+      }
       this.etag = res.headers.get('etag');
 
       // 1. Try to extract filename from Content-Disposition header (RFC 5987 UTF-8 support)
@@ -271,18 +283,30 @@ export class WasmDownloadTask {
       this.acceptsRanges = false;
       if (!this.filename) this.filename = 'download.bin';
       throw err;
+    } finally {
+      await res?.body?.cancel().catch(() => {});
     }
   }
 
-  async start() {
+  start() {
+    if (this.running) return this.running;
+    this.running = this.run().finally(() => { this.running = null; });
+    return this.running;
+  }
+
+  async run() {
     try {
-      await ensureWasmLoaded();
       this.abortController = new AbortController();
       this.isPaused = false;
       this.errorMessage = null;
+      this.downloadId = null;
       this.startTime = Date.now();
-
-      await this.probe();
+      this.downloadedBytes = 0;
+      this.chunks = [];
+      this.totalBytes = null;
+      this.wasmEngine?.free();
+      this.wasmEngine = null;
+      await Promise.all([ensureWasmLoaded(), this.probe()]);
       if (this.abortController.signal.aborted) return;
 
       if (!this.acceptsRanges || !this.totalBytes || this.totalBytes === 0) {
@@ -291,17 +315,21 @@ export class WasmDownloadTask {
         return;
       }
 
+      this.resetSpeed();
       console.log(`[AURORA] Starting multi-stream download: ${this.totalBytes} bytes, ${this.connections} conns (${this.schedulerType})`);
       this.status = 'Downloading';
 
+      const conns = this.schedulerType === 'single-stream' || this.schedulerType === 'single'
+        ? 1 : Math.min(this.connections, this.totalBytes);
+      // Browser streams use non-overlapping partitions until live split cancellation is supported.
       // Initialize Rust WebAssembly Scheduler Engine
       if (wasmInitialized) {
         try {
           this.wasmEngine = new AuroraWasmEngine(
             this.finalUrl,
             BigInt(this.totalBytes),
-            this.connections,
-            this.schedulerType
+            conns,
+            this.schedulerType === 'single-stream' || this.schedulerType === 'single' ? 'single-stream' : 'fixed'
           );
         } catch (e) {
           console.warn('[AURORA] Rust WASM engine init failed, falling back to JS coordinator:', e);
@@ -311,7 +339,6 @@ export class WasmDownloadTask {
 
       // Launch worker streams
       const workerPromises = [];
-      const conns = this.connections || 8;
 
       if (this.wasmEngine) {
         for (let workerId = 1; workerId <= conns; workerId++) {
@@ -324,30 +351,51 @@ export class WasmDownloadTask {
           const start = (workerId - 1) * chunkSize;
           const end = Math.min(workerId * chunkSize - 1, this.totalBytes - 1);
           if (start <= end) {
-            workerPromises.push(this.fetchRange(workerId, workerId, start, end));
+            this.activeWorkers++;
+            workerPromises.push(this.fetchRange(workerId, workerId, start, end).finally(() => { this.activeWorkers--; }));
           }
         }
       }
 
-      await Promise.all(workerPromises);
+      // Abort siblings before restarting; never mix partial ranges with a full response.
+      let workerError;
+      await Promise.all(workerPromises.map(promise => promise.catch(err => {
+        if (!workerError) {
+          workerError = err;
+          this.abortController.abort();
+        }
+      })));
+      if (workerError) {
+        if (this.isPaused) return;
+        if (!(workerError instanceof RangeUnsupportedError)) throw workerError;
+        this.abortController = new AbortController();
+        this.wasmEngine?.free();
+        this.wasmEngine = null;
+        this.chunks = [];
+        this.downloadedBytes = 0;
+        this.acceptsRanges = false;
+        await this.downloadSingleStream();
+        return;
+      }
 
       if (this.isPaused || this.abortController.signal.aborted) {
         return;
       }
 
-      if (this.downloadedBytes >= this.totalBytes) {
-        await this.finalizeAndSave();
-      } else if (this.downloadedBytes > 0) {
-        // Save whatever was downloaded
-        await this.finalizeAndSave();
+      if (this.downloadedBytes !== this.totalBytes) {
+        throw new Error(`Incomplete download: ${this.downloadedBytes} of ${this.totalBytes} bytes`);
       }
+      await this.finalizeAndSave();
     } catch (err) {
-      if (!this.isPaused && !this.abortController.signal.aborted) {
+      if (!this.isPaused) {
+        this.abortController.abort();
         console.error(`[AURORA] Download task ${this.id} failed:`, err);
-        this.status = 'Failed';
         this.errorMessage = err.message || String(err);
+        this.status = 'Failed';
         this.speedBytesPerSec = 0;
       }
+    } finally {
+      this.activeWorkers = 0;
     }
   }
 
@@ -355,23 +403,11 @@ export class WasmDownloadTask {
     this.activeWorkers++;
     try {
       while (!this.isPaused && !this.abortController.signal.aborted) {
-        let action = null;
-        try {
-          action = this.wasmEngine ? this.wasmEngine.get_next_action(this.activeWorkers) : null;
-        } catch (_) {}
+        const action = this.wasmEngine?.get_next_action(this.activeWorkers);
 
-        if (!action || action.action_type === 'do_nothing') {
-          // If all bytes downloaded, exit
-          if (this.totalBytes && this.downloadedBytes >= this.totalBytes) {
-            break;
-          }
-          // Pause briefly to allow straggler splits
-          await new Promise(r => setTimeout(r, 40));
-          if (!this.wasmEngine || this.downloadedBytes >= (this.totalBytes || 0)) {
-            break;
-          }
-          continue;
-        }
+        // Browser fetch streams cannot safely be resized after dispatch. Use the
+        // initial non-overlapping partitions; native ECT handles live splitting.
+        if (!action || action.action_type === 'do_nothing') break;
 
         const start = Number(action.start);
         const end = Number(action.end);
@@ -383,7 +419,7 @@ export class WasmDownloadTask {
       }
     } catch (err) {
       if (!this.isPaused && !this.abortController.signal.aborted) {
-        console.error(`[AURORA] Worker #${workerId} error:`, err);
+        throw err;
       }
     } finally {
       this.activeWorkers--;
@@ -392,7 +428,7 @@ export class WasmDownloadTask {
 
   async fetchRange(workerId, segId, start, end, retries = 3) {
     const rangeHeader = `bytes=${start}-${end}`;
-    const t0 = performance.now();
+    let lastProgressAt = performance.now();
 
     let res = null;
     let attempt = 0;
@@ -403,12 +439,13 @@ export class WasmDownloadTask {
 
         res = await fetch(this.finalUrl, {
           method: 'GET',
-          headers: { 'Range': rangeHeader, 'Cache-Control': 'no-cache' },
+          headers: { 'Range': rangeHeader, ...(this.etag && !this.etag.startsWith('W/') ? { 'If-Range': this.etag } : {}) },
           signal: this.abortController.signal
         });
 
         // Handle HTTP 429 / 503 throttling with exponential backoff & jitter
         if (res.status === 429 || res.status === 503) {
+          await res.body?.cancel();
           attempt++;
           if (attempt <= retries) {
             const backoffMs = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 8000);
@@ -434,11 +471,17 @@ export class WasmDownloadTask {
       throw new Error(`HTTP ${res?.status || 'Error'} fetching range ${rangeHeader}`);
     }
 
-    // Handle servers returning HTTP 200 (ignoring Range header)
-    if (res.status === 200 && start > 0) {
-      console.warn('[AURORA] Server returned HTTP 200 for sub-range. Falling back to single-stream mode.');
-      this.acceptsRanges = false;
-      return;
+    if (res.status === 200) {
+      await res.body?.cancel();
+      throw new RangeUnsupportedError('Server ignored the range; restarting as a single stream');
+    }
+    const range = /^bytes (\d+)-(\d+)\/(\d+)$/i.exec(res.headers.get('content-range') || '');
+    if (res.status !== 206 || !range || Number(range[1]) !== start ||
+        Number(range[2]) !== end || Number(range[3]) !== this.totalBytes ||
+        (res.headers.get('content-encoding') && res.headers.get('content-encoding') !== 'identity') ||
+        (this.etag && res.headers.get('etag') && res.headers.get('etag') !== this.etag)) {
+      await res.body?.cancel();
+      throw new Error(`Invalid Content-Range or changed resource for ${rangeHeader}`);
     }
 
     const reader = res.body.getReader();
@@ -457,13 +500,19 @@ export class WasmDownloadTask {
         if (done) break;
 
         if (value) {
-          const toCopy = Math.min(value.byteLength, expectedLength - bytesReceivedForSeg);
+          if (value.byteLength > expectedLength - bytesReceivedForSeg) {
+            await reader.cancel();
+            throw new Error(`Oversized range response for ${rangeHeader}`);
+          }
+          const toCopy = value.byteLength;
           if (toCopy > 0) {
             segmentBuffer.set(value.subarray(0, toCopy), bytesReceivedForSeg);
             bytesReceivedForSeg += toCopy;
             this.downloadedBytes += toCopy;
 
-            const dt = performance.now() - t0;
+            const now = performance.now();
+            const dt = now - lastProgressAt;
+            lastProgressAt = now;
             this.calculateSpeed();
             if (this.wasmEngine) {
               try {
@@ -485,6 +534,9 @@ export class WasmDownloadTask {
       return;
     }
 
+    if (bytesReceivedForSeg !== expectedLength) {
+      throw new Error(`Truncated range: expected ${expectedLength}, received ${bytesReceivedForSeg}`);
+    }
     this.chunks.push({ start, end, data: segmentBuffer.subarray(0, bytesReceivedForSeg) });
     if (this.wasmEngine) {
       try {
@@ -494,10 +546,15 @@ export class WasmDownloadTask {
   }
 
   async downloadSingleStream() {
+    this.resetSpeed();
+    this.activeWorkers = 1;
     this.status = 'Downloading';
     const res = await fetch(this.finalUrl, { signal: this.abortController.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
+    const encoded = res.headers.get('content-encoding');
+    const length = res.headers.get('content-length');
+    this.totalBytes = (!encoded || encoded === 'identity') && length !== null ? Number(length) : null;
     const reader = res.body.getReader();
     const receivedChunks = [];
     let received = 0;
@@ -524,24 +581,31 @@ export class WasmDownloadTask {
       return;
     }
 
-    this.status = 'Assembling';
-    const blob = new Blob(receivedChunks, { type: this.mimeType || 'application/octet-stream' });
-    await this.triggerChromeDownload(blob);
+    this.activeWorkers = 0;
+    if (this.totalBytes !== null && received !== this.totalBytes) throw new Error('Truncated single-stream download');
+    this.totalBytes = received;
+    this.chunks = [{ start: 0, end: received - 1, data: new Blob(receivedChunks) }];
+    await this.finalizeAndSave();
   }
 
-  calculateSpeed() {
-    const elapsed = (Date.now() - this.startTime) / 1000;
-    if (elapsed > 0.2 && isFinite(elapsed)) {
-      const calcSpeed = this.downloadedBytes / elapsed;
-      if (isFinite(calcSpeed) && calcSpeed >= 0) {
-        this.speedBytesPerSec = calcSpeed;
-        if (this.totalBytes && this.speedBytesPerSec > 1024) {
-          const remaining = Math.max(this.totalBytes - this.downloadedBytes, 0);
-          const eta = remaining / this.speedBytesPerSec;
-          this.etaSeconds = isFinite(eta) && eta >= 0 ? eta : null;
-        }
-      }
+  resetSpeed(now = performance.now()) {
+    this.speedSamples = [{ time: now, bytes: this.downloadedBytes }];
+    this.speedBytesPerSec = 0;
+    this.etaSeconds = null;
+  }
+
+  calculateSpeed(now = performance.now()) {
+    if (!this.speedSamples.length) this.resetSpeed(now);
+    const samples = this.speedSamples;
+    const last = samples[samples.length - 1];
+    if (now - last.time >= 100) samples.push({ time: now, bytes: this.downloadedBytes });
+    while (samples.length > 1 && samples[1].time <= now - 2000) samples.shift();
+    const elapsed = (now - samples[0].time) / 1000;
+    if (elapsed >= 0.1) {
+      this.speedBytesPerSec = Math.max(0, this.downloadedBytes - samples[0].bytes) / elapsed;
     }
+    this.etaSeconds = this.totalBytes !== null && this.speedBytesPerSec > 0
+      ? Math.max(0, this.totalBytes - this.downloadedBytes) / this.speedBytesPerSec : null;
   }
 
   async finalizeAndSave() {
@@ -549,6 +613,13 @@ export class WasmDownloadTask {
     console.log('[AURORA] Assembling downloaded chunks into final file...');
 
     this.chunks.sort((a, b) => a.start - b.start);
+    let offset = 0;
+    for (const chunk of this.chunks) {
+      const size = chunk.data.byteLength ?? chunk.data.size;
+      if (chunk.start !== offset || size !== chunk.end - chunk.start + 1) throw new Error('Incomplete or overlapping file ranges');
+      offset += size;
+    }
+    if (offset !== this.totalBytes) throw new Error('Incomplete file');
     const dataParts = this.chunks.map(c => c.data);
     const blob = new Blob(dataParts, { type: this.mimeType || 'application/octet-stream' });
 
@@ -556,6 +627,7 @@ export class WasmDownloadTask {
     this.chunks = [];
 
     if (this.checksum) {
+      if (!wasmInitialized) throw new Error('Checksum verification requires the WebAssembly engine');
       this.status = 'Verifying';
       const buffer = new Uint8Array(await blob.arrayBuffer());
       const hash = this.hashAlgo === 'blake3' ? compute_blake3(buffer) : compute_sha256(buffer);
@@ -570,8 +642,8 @@ export class WasmDownloadTask {
   }
 
   async triggerChromeDownload(blob) {
-    this.status = 'Completed';
     this.speedBytesPerSec = 0;
+    this.etaSeconds = null;
 
     // 1. Direct URL.createObjectURL (if in DOM context or Firefox)
     if (typeof document !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
@@ -589,9 +661,7 @@ export class WasmDownloadTask {
           });
         }
 
-        setTimeout(() => {
-          try { URL.revokeObjectURL(objectUrl); } catch (_) {}
-        }, 120000);
+        this.watchBrowserDownload(() => URL.revokeObjectURL(objectUrl));
         return;
       } catch (domErr) {
         console.warn('[AURORA] Direct Blob object URL failed, trying Offscreen bridge:', domErr);
@@ -642,20 +712,7 @@ export class WasmDownloadTask {
         chrome.runtime.sendMessage({ action: 'REVOKE_OBJECT_URL', taskId: this.id, objectUrl }).catch(() => {});
       };
 
-      if (this.downloadId && typeof chrome !== 'undefined' && chrome.downloads?.onChanged) {
-        const onChangedListener = (delta) => {
-          if (delta.id === this.downloadId && delta.state) {
-            if (delta.state.current === 'complete' || delta.state.current === 'interrupted') {
-              chrome.downloads.onChanged.removeListener(onChangedListener);
-              cleanup();
-            }
-          }
-        };
-        chrome.downloads.onChanged.addListener(onChangedListener);
-      }
-
-      // Safety fallback cleanup after 2 minutes
-      setTimeout(cleanup, 120000);
+      this.watchBrowserDownload(cleanup);
     } catch (swErr) {
       console.error(`[AURORA] Failed to finalize download for task ${this.id}:`, swErr);
       this.status = 'Failed';
@@ -664,65 +721,75 @@ export class WasmDownloadTask {
     }
   }
 
+  watchBrowserDownload(cleanup) {
+    if (!Number.isInteger(this.downloadId)) throw new Error('Browser did not accept the download');
+    let finished = false;
+    const finish = state => {
+      if (finished || (state !== 'complete' && state !== 'interrupted')) return;
+      finished = true;
+      chrome.downloads.onChanged.removeListener(onChanged);
+      cleanup();
+      if (state === 'interrupted') this.errorMessage = 'Browser interrupted saving the file';
+      if (this.status !== 'Cancelled') this.status = state === 'complete' ? 'Completed' : 'Failed';
+    };
+    const onChanged = delta => {
+      if (delta.id === this.downloadId) finish(delta.state?.current);
+    };
+    chrome.downloads.onChanged.addListener(onChanged);
+    // Covers completion between download() resolving and listener registration.
+    chrome.downloads.search({ id: this.downloadId }).then(items => finish(items[0]?.state)).catch(() => {});
+  }
+
   pause() {
+    if (!['Queued', 'Probing', 'Downloading'].includes(this.status)) return;
     this.isPaused = true;
     this.status = 'Paused';
     this.speedBytesPerSec = 0;
     this.abortController.abort();
   }
 
-  resume() {
+  async resume() {
     if (this.status === 'Paused' || this.status === 'Failed') {
-      this.start();
+      await this.running;
+      if (this.status === 'Cancelled') return;
+      return this.start(); // In-memory transfers restart cleanly; no duplicate chunks.
     }
   }
 
   cancel() {
     this.isPaused = true;
+    this.speedBytesPerSec = 0;
     this.status = 'Cancelled';
     this.abortController.abort();
+    if (Number.isInteger(this.downloadId)) chrome.downloads.cancel(this.downloadId).catch(() => {});
     this.chunks = [];
   }
 
   getSnapshot() {
-    if (this.wasmEngine) {
-      try {
-        const snap = this.wasmEngine.get_snapshot();
-        return {
-          id: this.id,
-          downloadId: this.downloadId,
-          filename: this.filename || 'download.bin',
-          url: this.finalUrl || this.url,
-          totalBytes: this.totalBytes,
-          downloadedBytes: this.downloadedBytes,
-          status: this.status,
-          errorMessage: this.errorMessage,
-          speedBytesPerSec: isFinite(snap.smoothed_speed_bytes_per_sec) ? snap.smoothed_speed_bytes_per_sec : this.speedBytesPerSec,
-          speedMbps: isFinite(snap.smoothed_speed_mbps) ? snap.smoothed_speed_mbps : 0,
-          etaSeconds: snap.eta_seconds || this.etaSeconds,
-          progressPct: snap.progress_pct || (this.totalBytes ? (this.downloadedBytes / this.totalBytes) * 100 : 0),
-          segments: snap.segments || [],
-          activeConnections: this.activeWorkers
-        };
-      } catch (_) {}
-    }
-
+    if (this.status === 'Downloading') this.calculateSpeed();
+    else { this.speedBytesPerSec = 0; this.etaSeconds = null; }
+    let segments = [];
+    try { segments = this.wasmEngine?.get_snapshot().segments || []; } catch (_) {}
     const progressPct = this.totalBytes && this.totalBytes > 0 ? (this.downloadedBytes / this.totalBytes) * 100 : 0;
     return {
       id: this.id,
       downloadId: this.downloadId,
       filename: this.filename || 'download.bin',
       url: this.finalUrl || this.url,
+      connections: this.connections,
+      schedulerType: this.schedulerType,
+      checksum: this.checksum,
+      hashAlgo: this.hashAlgo,
       totalBytes: this.totalBytes,
       downloadedBytes: this.downloadedBytes,
       status: this.status,
       errorMessage: this.errorMessage,
       speedBytesPerSec: this.speedBytesPerSec,
-      speedMbps: (this.speedBytesPerSec * 8) / (1024 * 1024),
+      speedMbps: (this.speedBytesPerSec * 8) / 1_000_000,
       etaSeconds: this.etaSeconds,
       progressPct: isFinite(progressPct) ? progressPct : 0,
-      segments: [],
-      activeConnections: this.activeWorkers
+      segments,
+      activeConnections: this.status === 'Downloading' ? this.activeWorkers : 0
     };
   }
 }

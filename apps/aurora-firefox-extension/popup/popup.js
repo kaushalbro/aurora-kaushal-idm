@@ -1,3 +1,5 @@
+import { formatSpeed, formatNetworkSpeed } from '../core/format.js';
+
 /**
  * AURORA Kaushal IDM - Popup Controller & Visualizer
  */
@@ -276,6 +278,7 @@ function renderDownloads(downloads) {
   });
 
   statTotalSpeed.textContent = formatSpeed(totalSpeed);
+  statTotalSpeed.title = `${formatNetworkSpeed(totalSpeed)} — 8 bits = 1 byte`;
   statActiveTasks.textContent = String(activeTasks);
 
   if (mergedList.length === 0) {
@@ -534,6 +537,7 @@ function updateDownloadCard(card, task) {
   if (task.status === 'Downloading') {
     const etaText = task.etaSeconds ? ` (ETA: ${formatDuration(task.etaSeconds)})` : '';
     metaSpeed.textContent = `${formatSpeed(task.speedBytesPerSec)}${etaText}`;
+    metaSpeed.title = `${formatNetworkSpeed(task.speedBytesPerSec)} — 8 bits = 1 byte`;
   } else if (task.status === 'Failed') {
     metaSpeed.textContent = task.errorMessage ? `Error: ${task.errorMessage}` : 'Download Failed';
   } else {
@@ -736,19 +740,6 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function formatSpeed(bytesPerSec) {
-  if (!bytesPerSec || bytesPerSec === 0 || !isFinite(bytesPerSec)) return '0.00 MB/s';
-  const mbps = bytesPerSec / (1024 * 1024);
-  if (mbps >= 1.0) {
-    return `${mbps.toFixed(2)} MB/s`;
-  }
-  const kbps = bytesPerSec / 1024;
-  if (kbps >= 1.0) {
-    return `${kbps.toFixed(1)} KB/s`;
-  }
-  return `${Math.round(bytesPerSec)} B/s`;
 }
 
 function formatDuration(seconds) {
