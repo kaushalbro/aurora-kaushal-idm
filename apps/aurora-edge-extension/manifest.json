@@ -32,9 +32,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content/interceptor.js"],
-      "css": ["content/interceptor.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/interceptor.js"
+      ],
+      "css": [
+        "content/interceptor.css"
+      ],
       "run_at": "document_start",
       "all_frames": true
     }
@@ -45,7 +51,8 @@
     "contextMenus",
     "alarms",
     "notifications",
-    "offscreen"
+    "offscreen",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"

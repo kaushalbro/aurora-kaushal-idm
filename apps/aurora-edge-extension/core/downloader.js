@@ -158,13 +158,26 @@ export class WasmDownloadTask {
   async probe() {
     this.status = 'Probing';
     let res = null;
+    // Bound probe latency: a hung HEAD/Range probe must not stall the task.
+    const probeTimeoutMs = 15000;
+    const withProbeTimeout = (signal) => {
+      if (signal?.aborted) return signal;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(new Error('Probe timeout')), probeTimeoutMs);
+      const forward = () => { clearTimeout(timer); };
+      signal?.addEventListener?.('abort', () => { clearTimeout(timer); ctrl.abort(signal.reason); }, { once: true });
+      // Link task-level abort so pause/cancel still wins.
+      this.abortController.signal.addEventListener('abort', () => { clearTimeout(timer); ctrl.abort(this.abortController.signal.reason); }, { once: true });
+      ctrl.signal.addEventListener('abort', forward, { once: true });
+      return ctrl.signal;
+    };
     try {
       // Step 1: Probe server with HEAD or GET
       try {
         res = await fetch(this.url, {
           method: 'HEAD',
           redirect: 'follow',
-          signal: this.abortController.signal
+          signal: withProbeTimeout(this.abortController.signal)
         });
       } catch (_) {}
 
@@ -323,13 +336,20 @@ export class WasmDownloadTask {
         ? 1 : Math.min(this.connections, this.totalBytes);
       // Browser streams use non-overlapping partitions until live split cancellation is supported.
       // Initialize Rust WebAssembly Scheduler Engine
+      // Pass the real scheduler type through: Fixed gives static partitions,
+      // ECT / Largest-Segment enable adaptive split metadata for the UI.
+      // Browser fetch streams stay non-overlapping (no mid-flight resize),
+      // the native desktop engine handles live splitting.
       if (wasmInitialized) {
         try {
+          const wasmSchedulerType = this.schedulerType === 'single-stream' || this.schedulerType === 'single'
+            ? 'single-stream'
+            : this.schedulerType;
           this.wasmEngine = new AuroraWasmEngine(
             this.finalUrl,
             BigInt(this.totalBytes),
             conns,
-            this.schedulerType === 'single-stream' || this.schedulerType === 'single' ? 'single-stream' : 'fixed'
+            wasmSchedulerType
           );
         } catch (e) {
           console.warn('[AURORA] Rust WASM engine init failed, falling back to JS coordinator:', e);
@@ -486,7 +506,10 @@ export class WasmDownloadTask {
 
     const reader = res.body.getReader();
     const expectedLength = end - start + 1;
-    const segmentBuffer = new Uint8Array(expectedLength);
+    // Zero-copy part list: avoids one large upfront malloc + one memmove per
+    // network chunk. Browser Blob storage backs large segments natively and
+    // keeps peak JS heap at ~1 chunk instead of ~1 whole segment.
+    const parts = [];
     let bytesReceivedForSeg = 0;
 
     try {
@@ -506,7 +529,9 @@ export class WasmDownloadTask {
           }
           const toCopy = value.byteLength;
           if (toCopy > 0) {
-            segmentBuffer.set(value.subarray(0, toCopy), bytesReceivedForSeg);
+            // Store the network buffer directly (zero-copy). Reader chunks
+            // are freshly allocated and safe to retain.
+            parts.push(value);
             bytesReceivedForSeg += toCopy;
             this.downloadedBytes += toCopy;
 
@@ -537,7 +562,9 @@ export class WasmDownloadTask {
     if (bytesReceivedForSeg !== expectedLength) {
       throw new Error(`Truncated range: expected ${expectedLength}, received ${bytesReceivedForSeg}`);
     }
-    this.chunks.push({ start, end, data: segmentBuffer.subarray(0, bytesReceivedForSeg) });
+    // Wrap parts in a Blob immediately so large segments are backed by the
+    // browser (often disk-spilled) instead of one huge JS Uint8Array.
+    this.chunks.push({ start, end, data: new Blob(parts) });
     if (this.wasmEngine) {
       try {
         this.wasmEngine.mark_segment_completed(segId);
@@ -645,8 +672,11 @@ export class WasmDownloadTask {
     this.speedBytesPerSec = 0;
     this.etaSeconds = null;
 
-    // 1. Direct URL.createObjectURL (if in DOM context or Firefox)
-    if (typeof document !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+    // 1. Fast path: create a Blob URL directly in this context.
+    // Works in popups, content-adjacent pages, Firefox background pages,
+    // and any context with URL.createObjectURL. MV3 Chromium service
+    // workers lack DOM URL creation, so they fall through to (2).
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
       try {
         const objectUrl = URL.createObjectURL(blob);
         try {

@@ -31,11 +31,16 @@ async function saveSettings() {
     .map(e => e.trim().toLowerCase().replace(/^\./, ''))
     .filter(Boolean);
 
+  const connections = Math.min(32, Math.max(1, parseInt(selectDefaultConns.value, 10) || 8));
+  const schedulerType = ['aurora-ect', 'largest-segment', 'fixed', 'single'].includes(selectDefaultScheduler.value)
+    ? selectDefaultScheduler.value
+    : 'aurora-ect';
+
   const updatedSettings = {
     autoCapture: checkAutoCapture.checked,
-    interceptExtensions: extensions,
-    connections: parseInt(selectDefaultConns.value, 10),
-    schedulerType: selectDefaultScheduler.value,
+    interceptExtensions: extensions.length ? extensions : undefined,
+    connections,
+    schedulerType,
   };
 
   await chrome.storage.local.set({ settings: updatedSettings });

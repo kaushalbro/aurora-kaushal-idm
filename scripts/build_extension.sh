@@ -103,7 +103,8 @@ cat > "$FIREFOX_DIR/manifest.json" << EOF
     "storage",
     "contextMenus",
     "alarms",
-    "notifications"
+    "notifications",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -182,7 +183,8 @@ cat > "$SAFARI_DIR/manifest.json" << EOF
     "storage",
     "contextMenus",
     "alarms",
-    "notifications"
+    "notifications",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"

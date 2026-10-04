@@ -195,8 +195,17 @@ function updateDesktopBannerUI(connected, version = '0.1.0') {
 
 async function syncWithDesktop(isManual = false) {
   if (!isDesktopConnected) return;
+  const withTimeout = (ms) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    return { signal: ctrl.signal, done: () => clearTimeout(t) };
+  };
   try {
-    const res = await fetch('http://127.0.0.1:28282/api/history');
+    const h = withTimeout(4000);
+    let res;
+    try {
+      res = await fetch('http://127.0.0.1:28282/api/history', { signal: h.signal });
+    } finally { h.done(); }
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.downloads)) {
@@ -237,11 +246,15 @@ async function syncWithDesktop(isManual = false) {
         }));
 
       if (recordsToPush.length > 0) {
-        await fetch('http://127.0.0.1:28282/api/history/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ downloads: recordsToPush })
-        });
+        const p = withTimeout(4000);
+        try {
+          await fetch('http://127.0.0.1:28282/api/history/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ downloads: recordsToPush }),
+            signal: p.signal
+          });
+        } finally { p.done(); }
       }
     }
   } catch (err) {
@@ -261,9 +274,11 @@ async function refreshDownloads() {
 }
 
 function renderDownloads(downloads) {
+  // Key by stable task id. Keying by URL collapses re-downloads of the same
+  // file and desktop/browser duplicates into one row (history loss).
   const combinedMap = new Map();
-  desktopSyncedDownloads.forEach(d => combinedMap.set(d.url || d.id, d));
-  downloads.forEach(d => combinedMap.set(d.url || d.id, d));
+  desktopSyncedDownloads.forEach(d => combinedMap.set(d.id, d));
+  downloads.forEach(d => combinedMap.set(d.id, d));
   const mergedList = Array.from(combinedMap.values());
   currentDownloadsList = mergedList;
 
@@ -597,9 +612,9 @@ function updateDownloadCard(card, task) {
 }
 
 async function togglePauseResume(taskId, currentStatus) {
-  if (currentStatus === 'Downloading') {
+  if (currentStatus === 'Downloading' || currentStatus === 'Probing' || currentStatus === 'Queued') {
     await chrome.runtime.sendMessage({ action: 'PAUSE_DOWNLOAD', taskId });
-  } else if (currentStatus === 'Paused') {
+  } else if (currentStatus === 'Paused' || currentStatus === 'Failed') {
     await chrome.runtime.sendMessage({ action: 'RESUME_DOWNLOAD', taskId });
   }
   refreshDownloads();

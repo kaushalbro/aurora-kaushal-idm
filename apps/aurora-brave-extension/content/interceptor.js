@@ -4,7 +4,15 @@
  */
 
 // Regex for direct downloadable file extensions
-const FILE_EXTENSIONS_REGEX = /\.(zip|rar|7z|tar|gz|bz2|xz|tgz|zst|lz4|iso|img|bin|exe|msi|dmg|pkg|deb|rpm|apk|aab|appimage|jar|whl|crx|wasm|mp4|mkv|avi|mov|wmv|flv|webm|3gp|mp3|flac|wav|aac|m4a|ogg|opus|pdf|doc|docx|xls|xlsx|ppt|pptx|epub|mobi|csv|sqlite|db|sql|vmdk|torrent)(?:[?#]|$)/i;
+// Rebuilt at runtime from user settings (options page) when available.
+const DEFAULT_EXTENSIONS = ['zip','rar','7z','tar','gz','bz2','xz','tgz','zst','lz4','iso','img','bin','exe','msi','dmg','pkg','deb','rpm','apk','aab','appimage','jar','whl','crx','wasm','mp4','mkv','avi','mov','wmv','flv','webm','3gp','mp3','flac','wav','aac','m4a','ogg','opus','pdf','doc','docx','xls','xlsx','ppt','pptx','epub','mobi','csv','sqlite','db','sql','vmdk','torrent'];
+let FILE_EXTENSIONS_REGEX = buildExtRegex(DEFAULT_EXTENSIONS);
+
+function buildExtRegex(list) {
+  const esc = (list || []).map(e => String(e).trim().toLowerCase().replace(/^\./, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean);
+  if (!esc.length) return /\.(zip|rar)(?:[?#]|$)/i;
+  return new RegExp('\\.(' + esc.join('|') + ')(?:[?#]|$)', 'i');
+}
 
 let autoCaptureEnabled = true;
 
@@ -13,6 +21,9 @@ async function loadSettings() {
     const { settings } = await chrome.storage.local.get('settings');
     if (settings && typeof settings.autoCapture === 'boolean') {
       autoCaptureEnabled = settings.autoCapture;
+    }
+    if (settings && Array.isArray(settings.interceptExtensions) && settings.interceptExtensions.length) {
+      FILE_EXTENSIONS_REGEX = buildExtRegex(settings.interceptExtensions);
     }
   } catch (_) {}
 }
@@ -118,6 +129,7 @@ function getFileExtension(filename) {
 }
 
 function triggerFlyingFileToTop(filename, startX, startY) {
+  if (!document.body) return;
   // Default to center if coordinates not provided
   if (typeof startX !== 'number' || typeof startY !== 'number') {
     startX = window.innerWidth / 2;
@@ -181,6 +193,7 @@ function triggerFlyingFileToTop(filename, startX, startY) {
 }
 
 function showTopRightDownloadPanel(filename, ext) {
+  if (!document.body) return;
   const existing = document.getElementById('aurora-top-panel-container');
   if (existing) existing.remove();
 

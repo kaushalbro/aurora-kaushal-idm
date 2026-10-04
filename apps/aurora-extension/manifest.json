@@ -45,7 +45,8 @@
     "contextMenus",
     "alarms",
     "notifications",
-    "offscreen"
+    "offscreen",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"

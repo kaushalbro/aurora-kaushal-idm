@@ -8,7 +8,18 @@ import { WasmDownloadTask, ensureWasmLoaded } from '../core/downloader.js';
 const tasks = new Map();
 
 // Set to track downloads initiated by AURORA itself so we don't intercept our own saves
+// Bounded LRU-style set: blob: URLs are unique per download, so evict oldest
+// after 200 entries and auto-expire after 5 minutes to avoid unbounded growth.
 const internalDownloadUrls = new Set();
+function registerInternalUrl(url) {
+  if (!url) return;
+  internalDownloadUrls.add(url);
+  if (internalDownloadUrls.size > 200) {
+    const oldest = internalDownloadUrls.values().next().value;
+    internalDownloadUrls.delete(oldest);
+  }
+  setTimeout(() => internalDownloadUrls.delete(url), 5 * 60 * 1000);
+}
 
 // Default Settings
 const DEFAULT_SETTINGS = {
@@ -126,7 +137,8 @@ function checkKeepAliveAlarm() {
   );
 
   if (hasActive) {
-    chrome.alarms.create('aurora-keepalive', { periodInMinutes: 0.5 });
+    // Chrome clamps sub-minute periods; 1 min is the safe cross-browser minimum.
+    chrome.alarms.create('aurora-keepalive', { periodInMinutes: 1 });
   } else {
     chrome.alarms.clear('aurora-keepalive').catch(() => {});
   }
@@ -383,7 +395,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'REGISTER_INTERNAL_URL': {
           if (message.url) {
-            internalDownloadUrls.add(message.url);
+            registerInternalUrl(message.url);
           }
           sendResponse({ success: true });
           break;
