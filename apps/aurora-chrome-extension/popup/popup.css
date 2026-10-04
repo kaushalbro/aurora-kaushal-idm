@@ -31,6 +31,10 @@
   padding: 0;
 }
 
+.hidden {
+  display: none !important;
+}
+
 html, body {
   width: 440px;
   min-width: 440px;
@@ -91,15 +95,26 @@ body {
   letter-spacing: -0.2px;
   color: var(--mac-text-primary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: center;
+  min-width: 0;
 }
 
 .header-actions-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
+  flex-wrap: nowrap;
+}
+
+#btn-add-modal {
+  height: 30px;
+  padding: 0 14px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .btn-svg {
@@ -154,13 +169,16 @@ body {
   background-color: #ffffff;
   border: 1px solid var(--mac-border);
   color: var(--mac-text-primary);
-  padding: 5px 9px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   cursor: pointer;
+  flex: 0 0 auto;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
@@ -194,7 +212,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
+  gap: 10px;
+  min-height: 46px;
+  padding: 7px 14px;
   background-color: #f7f7fb;
   border-bottom: 1px solid var(--mac-border);
   transition: all 0.2s ease;
@@ -213,7 +233,7 @@ body {
   display: flex;
   align-items: center;
   gap: 9px;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -239,14 +259,19 @@ body {
 .desktop-banner-info {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .banner-title {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--mac-text-primary);
-  line-height: 1.2;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .desktop-banner.banner-connected .banner-title {
@@ -256,8 +281,11 @@ body {
 .banner-subtitle {
   font-size: 10px;
   color: var(--mac-text-secondary);
-  line-height: 1.2;
+  line-height: 1.25;
   margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-dot {
@@ -282,20 +310,27 @@ body {
 .desktop-banner-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
+  flex-wrap: nowrap;
 }
 
 .btn-banner-download {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 9px;
+  height: 26px;
+  padding: 0 9px;
   background: var(--mac-blue);
   color: #ffffff;
   border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   text-decoration: none;
   transition: background 0.15s ease;
 }
@@ -307,14 +342,18 @@ body {
 .btn-banner-open {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 9px;
+  height: 26px;
+  padding: 0 9px;
   background: var(--mac-blue);
   color: #ffffff;
   border: none;
   border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -327,14 +366,18 @@ body {
 .btn-banner-sync {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 8px;
+  height: 26px;
+  padding: 0 8px;
   background: #ffffff;
   color: #065f46;
   border: 1px solid #6ee7b7;
   border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -346,16 +389,64 @@ body {
 .forward-toggle-wrap {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
+  height: 26px;
   font-size: 10.5px;
   font-weight: 500;
+  line-height: 1;
   color: #065f46;
   cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .forward-toggle-wrap input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
   cursor: pointer;
   accent-color: #10b981;
+  vertical-align: middle;
+}
+
+.forward-slider {
+  position: relative;
+  display: inline-block;
+  width: 26px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background-color: #d1d5db;
+  transition: background-color 0.15s ease;
+  vertical-align: middle;
+}
+
+.forward-slider::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.forward-toggle-wrap input:checked + .forward-slider {
+  background-color: #10b981;
+}
+
+.forward-toggle-wrap input:checked + .forward-slider::after {
+  transform: translateX(12px);
+}
+
+.forward-label {
+  line-height: 1;
 }
 
 /* Stats Bar */
@@ -363,7 +454,8 @@ body {
   flex: 0 0 auto;
   display: flex;
   justify-content: space-around;
-  padding: 8px 16px;
+  align-items: stretch;
+  padding: 8px 8px;
   background-color: var(--mac-stats);
   border-bottom: 1px solid var(--mac-border);
   font-size: 12px;
@@ -373,6 +465,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  padding: 0 8px;
 }
 
 .stat-label {
@@ -404,7 +501,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 14px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 5px 14px;
   background-color: #f0f0f4;
   border-bottom: 1px solid var(--mac-border);
   font-size: 11.5px;
@@ -418,7 +517,11 @@ body {
 .selection-left {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 24px;
 }
 
 .selection-label {
@@ -430,16 +533,23 @@ body {
 .selection-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .btn-bulk {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 8px;
+  height: 24px;
+  padding: 0 8px;
   font-size: 11px;
   font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: var(--radius-sm);
   background-color: #ffffff;
   border: 1px solid var(--mac-border);
@@ -513,10 +623,13 @@ body {
 }
 
 .card-select-wrap {
-  margin-right: 8px;
+  margin-right: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 20px;
+  height: 24px;
 }
 
 /* Downloads List - Scrollable Container */
@@ -597,9 +710,11 @@ body {
 .card-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
   min-width: 0;
+  min-height: 24px;
 }
 
 .file-info {
@@ -628,13 +743,18 @@ body {
 
 .card-actions {
   display: flex;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
   align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+  height: 24px;
 }
 
 .btn-card {
-  padding: 3px 5px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   font-size: 11px;
   display: inline-flex;
   align-items: center;
@@ -644,9 +764,9 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.08);
   color: var(--mac-text-primary);
   cursor: pointer;
+  flex: 0 0 auto;
+  line-height: 1;
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-  min-width: 22px;
-  height: 22px;
 }
 
 .btn-card svg {
@@ -729,6 +849,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  min-height: 18px;
   font-size: 11px;
   color: var(--mac-text-secondary);
   margin-bottom: 8px;
@@ -737,11 +859,20 @@ body {
 .meta-size {
   font-weight: 500;
   color: var(--mac-text-secondary);
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
 }
 
 .meta-speed {
   font-weight: 600;
   color: var(--mac-blue);
+  flex: 0 1 auto;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .status-badge {
@@ -749,8 +880,11 @@ body {
   border-radius: 4px;
   font-weight: 600;
   font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  flex: 0 0 auto;
 }
 
 .status-downloading {
@@ -863,6 +997,11 @@ body {
 .form-row {
   display: flex;
   gap: 10px;
+  align-items: flex-start;
+}
+
+.form-row > .form-group {
+  min-width: 0;
 }
 
 .flex-1 { flex: 1; }
@@ -903,8 +1042,76 @@ select:focus {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--mac-border);
   background-color: #f5f5f7;
+}
+
+.modal-footer .btn {
+  min-width: 96px;
+  height: 32px;
+  padding: 0 16px;
+}
+
+/* Keyboard focus visibility for all buttons */
+.btn:focus-visible,
+.btn-icon:focus-visible,
+.btn-card:focus-visible,
+.btn-bulk:focus-visible,
+.btn-banner-download:focus-visible,
+.btn-banner-open:focus-visible,
+.btn-banner-sync:focus-visible,
+.btn-close:focus-visible {
+  outline: 2px solid var(--mac-blue);
+  outline-offset: 1px;
+}
+
+/* Options page: escape fixed 440x560 popup sizing */
+html:has(body.options-page) {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 100%;
+  max-height: none;
+  overflow: auto;
+}
+
+body.options-page {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 100vh;
+  max-height: none;
+  overflow: visible;
+  display: block;
+}
+
+body.options-page .header {
+  align-items: stretch;
+  text-align: left;
+}
+
+body.options-page .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+body.options-page .brand .title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mac-text-primary);
+  margin: 0;
+}
+
+body.options-page .brand .subtitle {
+  font-size: 11px;
+  color: var(--mac-text-secondary);
+  margin: 2px 0 0 0;
 }

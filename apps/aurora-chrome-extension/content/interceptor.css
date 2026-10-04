@@ -88,6 +88,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  min-height: 44px;
   padding: 10px 14px;
   background-color: #f5f5f7;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -97,6 +99,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .aurora-bucket-landing {
@@ -118,21 +122,31 @@
   font-weight: 600;
   color: #1d1d1f;
   letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .aurora-panel-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  height: 24px;
 }
 
 .aurora-status-pill {
   font-size: 10px;
   font-weight: 600;
+  line-height: 1.4;
   background-color: rgba(0, 122, 255, 0.12);
   color: #007aff;
   padding: 2px 6px;
   border-radius: 4px;
+  white-space: nowrap;
   text-transform: uppercase;
 }
 
@@ -143,8 +157,14 @@
   line-height: 1;
   color: #86868b;
   cursor: pointer;
-  padding: 2px 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 4px;
+  flex: 0 0 auto;
 }
 
 .aurora-btn-close:hover {
