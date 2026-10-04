@@ -503,11 +503,22 @@ function createDownloadCard(task) {
   statusBadge.textContent = task.status;
   cardMeta.append(metaSize, metaSpeed, statusBadge);
 
+  // Timing row: Started / Expected end / Ended / Remaining / Total time.
+  // All values come from the Rust WASM engine snapshot (never JS-derived
+  // when WASM is present); see WasmDownloadTask.getSnapshot().
+  const timingRow = document.createElement('div');
+  timingRow.className = 'timing-row';
+  const timingLeft = document.createElement('span');
+  timingLeft.className = 'timing-started';
+  const timingRight = document.createElement('span');
+  timingRight.className = 'timing-eta';
+  timingRow.append(timingLeft, timingRight);
+
   // Segment Map
   const segmentMap = document.createElement('div');
   segmentMap.className = 'segment-map';
 
-  card.append(cardTop, progContainer, cardMeta, segmentMap);
+  card.append(cardTop, progContainer, cardMeta, timingRow, segmentMap);
 
   // Attach button & checkbox event listeners
   checkbox.addEventListener('change', (e) => {
@@ -541,6 +552,8 @@ function updateDownloadCard(card, task) {
   const btnOpenFile = card.querySelector('.btn-open-file');
   const btnPauseResume = card.querySelector('.btn-pause-resume');
   const segmentMap = card.querySelector('.segment-map');
+  const timingLeft = card.querySelector('.timing-started');
+  const timingRight = card.querySelector('.timing-eta');
 
   // Update progress bar
   progressBar.style.width = `${task.progressPct || 0}%`;
@@ -561,6 +574,30 @@ function updateDownloadCard(card, task) {
 
   statusBadge.textContent = task.status;
   statusBadge.className = `status-badge status-${task.status.toLowerCase()}`;
+
+  // Timing row from Rust-owned snapshot fields.
+  if (timingLeft && timingRight) {
+    const started = formatClock(task.startedAtMs);
+    timingLeft.textContent = started ? `Started ${started}` : '';
+    timingLeft.title = task.startedAtMs ? new Date(task.startedAtMs).toLocaleString() : '';
+    let right = '';
+    if (task.status === 'Completed') {
+      const ended = formatClock(task.endedAtMs);
+      if (ended) right = `Ended ${ended}`;
+      if (task.totalTimeSeconds != null && isFinite(task.totalTimeSeconds)) {
+        right += (right ? ' · ' : '') + `took ${formatDuration(task.totalTimeSeconds)}`;
+      }
+    } else if (task.status === 'Downloading' || task.status === 'Probing' || task.status === 'Queued') {
+      const expected = formatClock(task.expectedEndMs);
+      if (expected) right = `Expected ${expected}`;
+      if (task.remainingSeconds != null && isFinite(task.remainingSeconds)) {
+        right += (right ? ' · ' : '') + `${formatDuration(task.remainingSeconds)} left`;
+      }
+    } else if (task.elapsedSeconds != null && isFinite(task.elapsedSeconds) && task.elapsedSeconds > 0) {
+      right = `Elapsed ${formatDuration(task.elapsedSeconds)}`;
+    }
+    timingRight.textContent = right;
+  }
 
   // Update folder button download ID
   if (btnOpenFile) {
@@ -767,6 +804,13 @@ function formatDuration(seconds) {
   const h = Math.floor(m / 60);
   const remMin = m % 60;
   return `${h}h ${remMin}m`;
+}
+
+function formatClock(epochMs) {
+  if (epochMs == null || !isFinite(epochMs) || epochMs <= 0) return '';
+  const d = new Date(epochMs);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function openDownloadsFolder() {

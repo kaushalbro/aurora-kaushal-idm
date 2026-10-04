@@ -55,6 +55,13 @@ class PersistedTaskStub {
     this.progressPct = snapshot.progressPct || (this.totalBytes ? (this.downloadedBytes / this.totalBytes) * 100 : 100);
     this.segments = snapshot.segments || [];
     this.activeConnections = 0;
+    this.startedAtMs = snapshot.startedAtMs ?? null;
+    this.endedAtMs = snapshot.endedAtMs ?? null;
+    this.expectedEndMs = snapshot.expectedEndMs ?? null;
+    this.remainingSeconds = snapshot.remainingSeconds ?? null;
+    this.elapsedSeconds = snapshot.elapsedSeconds ?? null;
+    this.totalTimeSeconds = snapshot.totalTimeSeconds ?? null;
+    this.averageSpeedBps = snapshot.averageSpeedBps ?? 0;
   }
 
   getSnapshot() {
@@ -73,7 +80,14 @@ class PersistedTaskStub {
       etaSeconds: this.etaSeconds,
       progressPct: this.progressPct,
       segments: this.segments,
-      activeConnections: 0
+      activeConnections: 0,
+      startedAtMs: this.startedAtMs,
+      endedAtMs: this.endedAtMs,
+      expectedEndMs: this.expectedEndMs,
+      remainingSeconds: this.remainingSeconds,
+      elapsedSeconds: this.elapsedSeconds,
+      totalTimeSeconds: this.totalTimeSeconds,
+      averageSpeedBps: this.averageSpeedBps
     };
   }
 

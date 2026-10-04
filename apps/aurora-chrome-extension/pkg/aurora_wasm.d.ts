@@ -5,6 +5,19 @@ export class AuroraWasmEngine {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * Wall-clock end of the download (JS epoch millis), if completed.
+     */
+    completed_at_ms(): bigint | undefined;
+    /**
+     * Elapsed wall-clock seconds from Rust start to Rust end/now.
+     */
+    elapsed_seconds(): number;
+    /**
+     * Expected end (JS epoch millis): Rust end once completed,
+     * else Rust now + Rust eta while running.
+     */
+    expected_end_ms(): bigint | undefined;
+    /**
      * Evaluates current download state and returns the next scheduling action.
      */
     get_next_action(active_conns: number): any;
@@ -12,6 +25,12 @@ export class AuroraWasmEngine {
      * Returns a full snapshot of the current download state for the UI.
      */
     get_snapshot(): any;
+    /**
+     * Marks the whole download completed (wall-clock end time, Rust-owned).
+     * Called by the JS coordinator after final assembly, and automatically
+     * from mark_segment_completed once every segment is Completed.
+     */
+    mark_completed(): void;
     /**
      * Marks a segment as completed.
      */
@@ -21,6 +40,14 @@ export class AuroraWasmEngine {
      * Records chunk progress from a worker.
      */
     record_progress(segment_id: number, worker_id: number, chunk_bytes: bigint, duration_ms: number): void;
+    /**
+     * Remaining seconds from the Rust EWMA eta. None when completed/unknown.
+     */
+    remaining_seconds(): number | undefined;
+    /**
+     * Wall-clock start of the engine (JS epoch millis, Rust-owned).
+     */
+    started_at_ms(): bigint;
 }
 
 /**
@@ -49,11 +76,17 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_aurorawasmengine_free: (a: number, b: number) => void;
     readonly aurora_version: (a: number) => void;
+    readonly aurorawasmengine_completed_at_ms: (a: number, b: number) => void;
+    readonly aurorawasmengine_elapsed_seconds: (a: number) => number;
+    readonly aurorawasmengine_expected_end_ms: (a: number, b: number) => void;
     readonly aurorawasmengine_get_next_action: (a: number, b: number, c: number) => void;
     readonly aurorawasmengine_get_snapshot: (a: number, b: number) => void;
+    readonly aurorawasmengine_mark_completed: (a: number) => void;
     readonly aurorawasmengine_mark_segment_completed: (a: number, b: number) => void;
     readonly aurorawasmengine_new: (a: number, b: number, c: number, d: number, e: bigint, f: number, g: number, h: number) => void;
     readonly aurorawasmengine_record_progress: (a: number, b: number, c: number, d: bigint, e: number) => void;
+    readonly aurorawasmengine_remaining_seconds: (a: number, b: number) => void;
+    readonly aurorawasmengine_started_at_ms: (a: number) => bigint;
     readonly compute_blake3: (a: number, b: number, c: number) => void;
     readonly compute_sha256: (a: number, b: number, c: number) => void;
     readonly verify_checksum: (a: number, b: number, c: number, d: number, e: number, f: number) => number;

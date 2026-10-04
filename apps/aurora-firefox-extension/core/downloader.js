@@ -140,6 +140,11 @@ export class WasmDownloadTask {
     this.downloadId = null;
     this.running = null;
     this.speedSamples = [];
+    // Timing display fields are sourced from the Rust WASM engine snapshot
+    // (started_at_ms / ended_at_ms / expected_end_ms / remaining_seconds /
+    // elapsed_seconds / average_speed_bytes_per_sec). JS fallbacks below are
+    // only used when WASM could not load.
+    this.completedAtMs = null;
   }
 
   get status() {
@@ -314,6 +319,7 @@ export class WasmDownloadTask {
       this.errorMessage = null;
       this.downloadId = null;
       this.startTime = Date.now();
+      this.completedAtMs = null;
       this.downloadedBytes = 0;
       this.chunks = [];
       this.totalBytes = null;
@@ -665,6 +671,14 @@ export class WasmDownloadTask {
       }
     }
 
+    // Rust owns the end timestamp: stamp completion in the WASM engine
+    // before handing the file to the browser.
+    try {
+      if (this.wasmEngine && typeof this.wasmEngine.mark_completed === 'function') {
+        this.wasmEngine.mark_completed();
+      }
+    } catch (_) {}
+
     await this.triggerChromeDownload(blob);
   }
 
@@ -760,6 +774,7 @@ export class WasmDownloadTask {
       chrome.downloads.onChanged.removeListener(onChanged);
       cleanup();
       if (state === 'interrupted') this.errorMessage = 'Browser interrupted saving the file';
+      if (state === 'complete' && this.completedAtMs == null) this.completedAtMs = Date.now();
       if (this.status !== 'Cancelled') this.status = state === 'complete' ? 'Completed' : 'Failed';
     };
     const onChanged = delta => {
@@ -799,8 +814,29 @@ export class WasmDownloadTask {
     if (this.status === 'Downloading') this.calculateSpeed();
     else { this.speedBytesPerSec = 0; this.etaSeconds = null; }
     let segments = [];
-    try { segments = this.wasmEngine?.get_snapshot().segments || []; } catch (_) {}
+    let wasmTiming = null;
+    try {
+      const snap = this.wasmEngine?.get_snapshot();
+      if (snap) {
+        segments = snap.segments || [];
+        wasmTiming = snap;
+      }
+    } catch (_) {}
     const progressPct = this.totalBytes && this.totalBytes > 0 ? (this.downloadedBytes / this.totalBytes) * 100 : 0;
+    // Timing display comes from the Rust WASM engine (started_at_ms,
+    // ended_at_ms, expected_end_ms, remaining_seconds, elapsed_seconds,
+    // average_speed_bytes_per_sec). JS fallbacks apply only without WASM.
+    const startedAtMs = wasmTiming?.started_at_ms ?? this.startTime ?? Date.now();
+    const endedAtMs = wasmTiming?.ended_at_ms ?? this.completedAtMs ?? null;
+    const remainingSeconds = wasmTiming?.remaining_seconds ?? this.etaSeconds ?? null;
+    const expectedEndMs = wasmTiming?.expected_end_ms
+      ?? (this.etaSeconds != null ? Date.now() + this.etaSeconds * 1000 : null);
+    const elapsedSeconds = wasmTiming?.elapsed_seconds
+      ?? Math.max(0, (Date.now() - startedAtMs) / 1000);
+    const totalTimeSeconds = endedAtMs != null
+      ? Math.max(0, (endedAtMs - startedAtMs) / 1000) : null;
+    const averageSpeedBps = wasmTiming?.average_speed_bytes_per_sec
+      ?? (totalTimeSeconds ? this.downloadedBytes / totalTimeSeconds : 0);
     return {
       id: this.id,
       downloadId: this.downloadId,
@@ -819,7 +855,14 @@ export class WasmDownloadTask {
       etaSeconds: this.etaSeconds,
       progressPct: isFinite(progressPct) ? progressPct : 0,
       segments,
-      activeConnections: this.status === 'Downloading' ? this.activeWorkers : 0
+      activeConnections: this.status === 'Downloading' ? this.activeWorkers : 0,
+      startedAtMs,
+      endedAtMs,
+      expectedEndMs,
+      remainingSeconds,
+      elapsedSeconds,
+      totalTimeSeconds,
+      averageSpeedBps: Number.isFinite(averageSpeedBps) ? averageSpeedBps : 0
     };
   }
 }

@@ -287,3 +287,18 @@ test('JavaScript fallback still uses parallel ranges when WASM cannot load', asy
   assert.deepEqual(download.saved, payload);
   assert.equal(server.requests.filter(r => r.range).length, 4);
 });
+
+test('timing rows come from the Rust engine, not JS estimates', async () => {
+  installServer();
+  const t = task({ connections: 4 });
+  await t.start();
+  assert.equal(t.status, 'Completed', t.errorMessage);
+  const snap = t.getSnapshot();
+  assert.ok(typeof snap.startedAtMs === 'number' && snap.startedAtMs > 0);
+  assert.ok(typeof snap.endedAtMs === 'number' && snap.endedAtMs >= snap.startedAtMs);
+  assert.equal(snap.expectedEndMs, snap.endedAtMs);
+  assert.equal(snap.remainingSeconds, null);
+  assert.ok(snap.totalTimeSeconds != null && snap.totalTimeSeconds >= 0);
+  assert.ok(snap.elapsedSeconds >= snap.totalTimeSeconds);
+  assert.ok(snap.averageSpeedBps > 0);
+});

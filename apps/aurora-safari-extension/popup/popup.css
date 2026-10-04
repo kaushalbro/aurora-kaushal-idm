@@ -907,6 +907,36 @@ body {
   color: #dc2626;
 }
 
+/* Timing row: Started / Expected end / Ended / Remaining / Total time */
+.timing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 16px;
+  font-size: 10.5px;
+  color: var(--mac-text-secondary);
+  margin-bottom: 8px;
+}
+
+.timing-started {
+  font-weight: 500;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.timing-eta {
+  font-weight: 600;
+  color: var(--mac-blue);
+  flex: 0 1 auto;
+  white-space: nowrap;
+  text-align: right;
+}
+
 /* macOS Flat Segment Visualizer */
 .segment-map {
   display: flex;

@@ -9,6 +9,7 @@ use aurora_scheduler::aurora_ect::AuroraEctScheduler;
 use aurora_scheduler::fixed::FixedSegmentScheduler;
 use aurora_scheduler::largest_segment::LargestSegmentScheduler;
 use aurora_scheduler::single_stream::SingleStreamScheduler;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -30,6 +31,12 @@ pub struct AuroraWasmEngine {
     segments: Vec<Segment>,
     worker_rates: HashMap<WorkerId, f64>,
     downloaded_bytes: u64,
+    /// Wall-clock time the engine was created (JS epoch millis).
+    /// Single Rust-owned timing origin for Started display.
+    started_at_ms: i64,
+    /// Wall-clock time the download completed (JS epoch millis).
+    /// Set via mark_completed(); None while in progress.
+    completed_at_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +74,16 @@ pub struct WasmEngineSnapshot {
     pub eta_seconds: Option<f64>,
     pub active_connections: usize,
     pub segments: Vec<WasmSegmentState>,
+    /// Rust-owned wall-clock timing (JS epoch millis / seconds).
+    /// Started = engine creation; ended = mark_completed();
+    /// expected_end = now + Rust eta while running, ended once completed;
+    /// remaining mirrors eta; elapsed/average derive from Rust clock + bytes.
+    pub started_at_ms: i64,
+    pub ended_at_ms: Option<i64>,
+    pub elapsed_seconds: f64,
+    pub expected_end_ms: Option<i64>,
+    pub remaining_seconds: Option<f64>,
+    pub average_speed_bytes_per_sec: f64,
 }
 
 #[wasm_bindgen]
@@ -127,6 +144,8 @@ impl AuroraWasmEngine {
             segments,
             worker_rates: HashMap::new(),
             downloaded_bytes: 0,
+            started_at_ms: Utc::now().timestamp_millis(),
+            completed_at_ms: None,
         })
     }
 
@@ -270,6 +289,65 @@ impl AuroraWasmEngine {
             seg.state = SegmentState::Completed;
             seg.downloaded = seg.range.len();
         }
+        if !self.segments.is_empty()
+            && self.segments.iter().all(|s| s.state == SegmentState::Completed)
+        {
+            self.mark_completed();
+        }
+    }
+
+    /// Marks the whole download completed (wall-clock end time, Rust-owned).
+    /// Called by the JS coordinator after final assembly, and automatically
+    /// from mark_segment_completed once every segment is Completed.
+    pub fn mark_completed(&mut self) {
+        if self.completed_at_ms.is_none() {
+            self.completed_at_ms = Some(Utc::now().timestamp_millis());
+        }
+    }
+
+    /// Wall-clock start of the engine (JS epoch millis, Rust-owned).
+    pub fn started_at_ms(&self) -> i64 {
+        self.started_at_ms
+    }
+
+    /// Elapsed wall-clock seconds from Rust start to Rust end/now.
+    pub fn elapsed_seconds(&self) -> f64 {
+        let now_ms = Utc::now().timestamp_millis();
+        let end_ms = self.completed_at_ms.unwrap_or(now_ms);
+        ((end_ms.saturating_sub(self.started_at_ms)) as f64 / 1000.0).max(0.0)
+    }
+
+    /// Expected end (JS epoch millis): Rust end once completed,
+    /// else Rust now + Rust eta while running.
+    pub fn expected_end_ms(&self) -> Option<i64> {
+        if let Some(ended) = self.completed_at_ms {
+            return Some(ended);
+        }
+        self.current_eta_seconds()
+            .map(|eta| Utc::now().timestamp_millis().saturating_add((eta * 1000.0) as i64))
+    }
+
+    /// Remaining seconds from the Rust EWMA eta. None when completed/unknown.
+    pub fn remaining_seconds(&self) -> Option<f64> {
+        if self.completed_at_ms.is_some() {
+            return None;
+        }
+        self.current_eta_seconds()
+    }
+
+    fn current_eta_seconds(&self) -> Option<f64> {
+        if let Some(total) = self.total_bytes {
+            let speed = self.ewma.smoothed_rate();
+            if speed > 1024.0 && total > self.downloaded_bytes {
+                return Some((total - self.downloaded_bytes) as f64 / speed);
+            }
+        }
+        None
+    }
+
+    /// Wall-clock end of the download (JS epoch millis), if completed.
+    pub fn completed_at_ms(&self) -> Option<i64> {
+        self.completed_at_ms
     }
 
     /// Returns a full snapshot of the current download state for the UI.
@@ -295,6 +373,22 @@ impl AuroraWasmEngine {
             }
         } else {
             None
+        };
+
+        // All timing derives from the Rust-owned wall clock + Rust eta.
+        // JS must display these fields, never recompute them.
+        let now_ms = Utc::now().timestamp_millis();
+        let ended_at_ms = self.completed_at_ms;
+        let end_ref_ms = ended_at_ms.unwrap_or(now_ms);
+        let elapsed_seconds =
+            ((end_ref_ms.saturating_sub(self.started_at_ms)) as f64 / 1000.0).max(0.0);
+        let expected_end_ms = ended_at_ms.or(eta_seconds
+            .map(|eta| now_ms.saturating_add((eta * 1000.0) as i64)));
+        let remaining_seconds = if ended_at_ms.is_some() { None } else { eta_seconds };
+        let average_speed_bytes_per_sec = if elapsed_seconds > 0.0 {
+            self.downloaded_bytes as f64 / elapsed_seconds
+        } else {
+            0.0
         };
 
         let active_conns = self
@@ -326,6 +420,12 @@ impl AuroraWasmEngine {
             eta_seconds,
             active_connections: active_conns,
             segments: wasm_segments,
+            started_at_ms: self.started_at_ms,
+            ended_at_ms,
+            elapsed_seconds,
+            expected_end_ms,
+            remaining_seconds,
+            average_speed_bytes_per_sec,
         };
 
         serde_wasm_bindgen::to_value(&snapshot).map_err(|e| JsValue::from_str(&e.to_string()))

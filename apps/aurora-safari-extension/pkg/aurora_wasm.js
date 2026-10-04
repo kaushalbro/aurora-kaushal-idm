@@ -12,6 +12,45 @@ export class AuroraWasmEngine {
         wasm.__wbg_aurorawasmengine_free(ptr, 0);
     }
     /**
+     * Wall-clock end of the download (JS epoch millis), if completed.
+     * @returns {bigint | undefined}
+     */
+    completed_at_ms() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.aurorawasmengine_completed_at_ms(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r2 = getDataViewMemory0().getBigInt64(retptr + 8 * 1, true);
+            return r0 === 0 ? undefined : r2;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Elapsed wall-clock seconds from Rust start to Rust end/now.
+     * @returns {number}
+     */
+    elapsed_seconds() {
+        const ret = wasm.aurorawasmengine_elapsed_seconds(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Expected end (JS epoch millis): Rust end once completed,
+     * else Rust now + Rust eta while running.
+     * @returns {bigint | undefined}
+     */
+    expected_end_ms() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.aurorawasmengine_expected_end_ms(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r2 = getDataViewMemory0().getBigInt64(retptr + 8 * 1, true);
+            return r0 === 0 ? undefined : r2;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
      * Evaluates current download state and returns the next scheduling action.
      * @param {number} active_conns
      * @returns {any}
@@ -49,6 +88,14 @@ export class AuroraWasmEngine {
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
+    }
+    /**
+     * Marks the whole download completed (wall-clock end time, Rust-owned).
+     * Called by the JS coordinator after final assembly, and automatically
+     * from mark_segment_completed once every segment is Completed.
+     */
+    mark_completed() {
+        wasm.aurorawasmengine_mark_completed(this.__wbg_ptr);
     }
     /**
      * Marks a segment as completed.
@@ -93,6 +140,29 @@ export class AuroraWasmEngine {
      */
     record_progress(segment_id, worker_id, chunk_bytes, duration_ms) {
         wasm.aurorawasmengine_record_progress(this.__wbg_ptr, segment_id, worker_id, chunk_bytes, duration_ms);
+    }
+    /**
+     * Remaining seconds from the Rust EWMA eta. None when completed/unknown.
+     * @returns {number | undefined}
+     */
+    remaining_seconds() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.aurorawasmengine_remaining_seconds(retptr, this.__wbg_ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r2 = getDataViewMemory0().getFloat64(retptr + 8 * 1, true);
+            return r0 === 0 ? undefined : r2;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Wall-clock start of the engine (JS epoch millis, Rust-owned).
+     * @returns {bigint}
+     */
+    started_at_ms() {
+        const ret = wasm.aurorawasmengine_started_at_ms(this.__wbg_ptr);
+        return ret;
     }
 }
 if (Symbol.dispose) AuroraWasmEngine.prototype[Symbol.dispose] = AuroraWasmEngine.prototype.free;
@@ -203,6 +273,14 @@ function __wbg_get_imports() {
         __wbg_getRandomValues_a678b7300e8ed57f: function() { return handleError(function (arg0, arg1) {
             globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
         }, arguments); },
+        __wbg_getTime_f5a55efff2585d5d: function(arg0) {
+            const ret = getObject(arg0).getTime();
+            return ret;
+        },
+        __wbg_new_0_72d020f0c63443d4: function() {
+            const ret = new Date();
+            return addHeapObject(ret);
+        },
         __wbg_new_617a8cdb8bb1130e: function() {
             const ret = new Object();
             return addHeapObject(ret);
@@ -222,12 +300,17 @@ function __wbg_get_imports() {
             const ret = arg0;
             return addHeapObject(ret);
         },
-        __wbindgen_generic_0000000000000002: function(arg0, arg1) {
+        __wbindgen_generic_0000000000000002: function(arg0) {
+            // Cast intrinsic for `I64 -> Externref`.
+            const ret = arg0;
+            return addHeapObject(ret);
+        },
+        __wbindgen_generic_0000000000000003: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
             return addHeapObject(ret);
         },
-        __wbindgen_generic_0000000000000003: function(arg0) {
+        __wbindgen_generic_0000000000000004: function(arg0) {
             // Cast intrinsic for `U64 -> Externref`.
             const ret = BigInt.asUintN(64, arg0);
             return addHeapObject(ret);
