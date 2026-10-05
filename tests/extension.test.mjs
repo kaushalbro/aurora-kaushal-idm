@@ -302,3 +302,36 @@ test('timing rows come from the Rust engine, not JS estimates', async () => {
   assert.ok(snap.elapsedSeconds >= snap.totalTimeSeconds);
   assert.ok(snap.averageSpeedBps > 0);
 });
+
+test('internal blob URL registration preserves exact custom filename and extension', async () => {
+  const { setInternalUrlRegistrar } = await import('../apps/aurora-extension/core/downloader.js');
+  let registeredUrl = null;
+  let registeredFilename = null;
+  setInternalUrlRegistrar((url, filename) => {
+    registeredUrl = url;
+    registeredFilename = filename;
+  });
+
+  const t = new WasmDownloadTask('test_fn', 'https://example.test/500MB-CZIPtestfile.org.zip', '500MB-CZIPtestfile.org.zip');
+  globalThis.URL = {
+    createObjectURL: (b) => 'blob:chrome-extension://aurora-id/43e399fd-cfff-424d-89f4-26c37bcd9421',
+    revokeObjectURL: () => {}
+  };
+  globalThis.chrome = {
+    runtime: {
+      sendMessage: async (msg) => ({ success: true })
+    },
+    downloads: {
+      download: async (opts) => 1234,
+      onChanged: { addListener: () => {}, removeListener: () => {} },
+      search: async () => [{ state: 'complete' }]
+    }
+  };
+
+  const fakeBlob = new Blob(['test']);
+  await t.triggerChromeDownload(fakeBlob);
+
+  assert.equal(registeredUrl, 'blob:chrome-extension://aurora-id/43e399fd-cfff-424d-89f4-26c37bcd9421');
+  assert.equal(registeredFilename, '500MB-CZIPtestfile.org.zip');
+  assert.equal(t.finalBlobUrl, 'blob:chrome-extension://aurora-id/43e399fd-cfff-424d-89f4-26c37bcd9421');
+});

@@ -2,24 +2,25 @@
  * Aurora Kaushal Download Manager - Nepal
  * Service Worker (Manifest V3) - Intelligent High-Performance Interceptor
  */
-import { WasmDownloadTask, ensureWasmLoaded } from '../core/downloader.js';
+import { WasmDownloadTask, ensureWasmLoaded, setInternalUrlRegistrar } from '../core/downloader.js';
 
 // Active download tasks in memory
 const tasks = new Map();
 
-// Set to track downloads initiated by AURORA itself so we don't intercept our own saves
-// Bounded LRU-style set: blob: URLs are unique per download, so evict oldest
-// after 200 entries and auto-expire after 5 minutes to avoid unbounded growth.
-const internalDownloadUrls = new Set();
-function registerInternalUrl(url) {
+// Map to track downloads initiated by AURORA itself and their target filenames
+// Bounded LRU-style map: blob: URLs are unique per download, so evict oldest
+// after 200 entries and auto-expire after 10 minutes to avoid unbounded growth.
+const internalDownloadUrls = new Map();
+function registerInternalUrl(url, filename) {
   if (!url) return;
-  internalDownloadUrls.add(url);
+  internalDownloadUrls.set(url, filename || null);
   if (internalDownloadUrls.size > 200) {
-    const oldest = internalDownloadUrls.values().next().value;
+    const oldest = internalDownloadUrls.keys().next().value;
     internalDownloadUrls.delete(oldest);
   }
-  setTimeout(() => internalDownloadUrls.delete(url), 5 * 60 * 1000);
+  setTimeout(() => internalDownloadUrls.delete(url), 10 * 60 * 1000);
 }
+setInternalUrlRegistrar(registerInternalUrl);
 
 // Default Settings
 const DEFAULT_SETTINGS = {
@@ -285,10 +286,43 @@ chrome.downloads.onCreated.addListener(async (downloadItem) => {
 
 if (chrome.downloads.onDeterminingFilename) {
   chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
-    if (downloadItem.byExtensionId === chrome.runtime.id) {
-      suggest();
+    const itemUrl = downloadItem.finalUrl || downloadItem.url || '';
+
+    // 1. Check internal download map (blob URLs or URLs tracked by AURORA)
+    let mappedFilename = internalDownloadUrls.get(downloadItem.url) ||
+                         internalDownloadUrls.get(downloadItem.finalUrl) ||
+                         internalDownloadUrls.get(itemUrl);
+
+    // 2. If not found by exact URL, check active tasks matching downloadId or finalBlobUrl
+    if (!mappedFilename) {
+      for (const task of tasks.values()) {
+        if (task.downloadId && task.downloadId === downloadItem.id && task.filename) {
+          mappedFilename = task.filename;
+          break;
+        }
+        if (task.finalBlobUrl && (task.finalBlobUrl === downloadItem.url || task.finalBlobUrl === downloadItem.finalUrl || task.finalBlobUrl === itemUrl)) {
+          mappedFilename = task.filename;
+          break;
+        }
+      }
+    }
+
+    // 3. If download was initiated by AURORA extension with a valid explicit filename
+    if (!mappedFilename && downloadItem.byExtensionId === chrome.runtime.id) {
+      const currentName = downloadItem.filename;
+      if (currentName && !currentName.startsWith('blob:') && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\.[a-z0-9]+)?$/i.test(currentName)) {
+        mappedFilename = currentName;
+      }
+    }
+
+    if (mappedFilename) {
+      suggest({
+        filename: mappedFilename,
+        conflictAction: 'uniquify'
+      });
       return;
     }
+
     suggest();
   });
 }
@@ -457,7 +491,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'REGISTER_INTERNAL_URL': {
           if (message.url) {
-            registerInternalUrl(message.url);
+            registerInternalUrl(message.url, message.filename);
           }
           sendResponse({ success: true });
           break;

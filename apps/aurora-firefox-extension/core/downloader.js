@@ -28,6 +28,18 @@ export async function ensureWasmLoaded() {
   await wasmLoading;
 }
 
+let internalUrlRegistrar = null;
+export function setInternalUrlRegistrar(fn) {
+  internalUrlRegistrar = fn;
+}
+export function registerInternalBlobUrl(url, filename) {
+  if (typeof internalUrlRegistrar === 'function') {
+    try {
+      internalUrlRegistrar(url, filename);
+    } catch (_) {}
+  }
+}
+
 class RangeUnsupportedError extends Error {}
 
 /**
@@ -138,6 +150,7 @@ export class WasmDownloadTask {
     // elapsed_seconds / average_speed_bytes_per_sec). JS fallbacks below are
     // only used when WASM could not load.
     this.completedAtMs = null;
+    this.finalBlobUrl = null;
   }
 
   get status() {
@@ -691,6 +704,7 @@ export class WasmDownloadTask {
   async triggerChromeDownload(blob) {
     this.speedBytesPerSec = 0;
     this.etaSeconds = null;
+    const targetFilename = this.filename || 'download.bin';
 
     // 1. Fast path: create a Blob URL directly in this context.
     // Works in popups, content-adjacent pages, Firefox background pages,
@@ -699,14 +713,21 @@ export class WasmDownloadTask {
     if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
       try {
         const objectUrl = URL.createObjectURL(blob);
+        this.finalBlobUrl = objectUrl;
+        registerInternalBlobUrl(objectUrl, targetFilename);
         try {
-          await chrome.runtime.sendMessage({ action: 'REGISTER_INTERNAL_URL', url: objectUrl });
+          await chrome.runtime.sendMessage({
+            action: 'REGISTER_INTERNAL_URL',
+            url: objectUrl,
+            filename: targetFilename,
+            taskId: this.id
+          });
         } catch (_) {}
 
         if (typeof chrome !== 'undefined' && chrome.downloads?.download) {
           this.downloadId = await chrome.downloads.download({
             url: objectUrl,
-            filename: this.filename || 'download.bin',
+            filename: targetFilename,
             saveAs: false
           });
         }
@@ -730,7 +751,7 @@ export class WasmDownloadTask {
       const res = await chrome.runtime.sendMessage({
         action: 'CREATE_OBJECT_URL',
         taskId: this.id,
-        filename: this.filename || 'download.bin',
+        filename: targetFilename,
         mimeType: this.mimeType || 'application/octet-stream'
       });
 
@@ -739,20 +760,28 @@ export class WasmDownloadTask {
       }
 
       const objectUrl = res.objectUrl;
+      this.finalBlobUrl = objectUrl;
 
       // Register internal URL so service worker doesn't intercept its own download
+      // and so chrome.downloads.onDeterminingFilename sets the exact custom filename
+      registerInternalBlobUrl(objectUrl, targetFilename);
       try {
-        await chrome.runtime.sendMessage({ action: 'REGISTER_INTERNAL_URL', url: objectUrl });
+        await chrome.runtime.sendMessage({
+          action: 'REGISTER_INTERNAL_URL',
+          url: objectUrl,
+          filename: targetFilename,
+          taskId: this.id
+        });
       } catch (_) {}
 
       // Trigger download using the Service Worker's chrome.downloads API
       if (typeof chrome !== 'undefined' && chrome.downloads?.download) {
         this.downloadId = await chrome.downloads.download({
           url: objectUrl,
-          filename: this.filename || 'download.bin',
+          filename: targetFilename,
           saveAs: false
         });
-        console.log(`[AURORA] Successfully triggered browser download id=${this.downloadId} for task ${this.id}`);
+        console.log(`[AURORA] Successfully triggered browser download id=${this.downloadId} for task ${this.id} (${targetFilename})`);
       } else {
         throw new Error('chrome.downloads.download API is not available');
       }

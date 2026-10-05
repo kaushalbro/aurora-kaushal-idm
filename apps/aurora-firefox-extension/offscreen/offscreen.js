@@ -43,8 +43,18 @@ async function handleCreateObjectUrl({ taskId, filename }) {
   }
 
   const objectUrl = URL.createObjectURL(blob);
+  const targetFilename = filename || 'download.bin';
   activeObjectUrls.set(taskId, objectUrl);
-  console.log(`[AURORA Offscreen] Created Object URL for task ${taskId} (${filename || 'download.bin'})`);
+  console.log(`[AURORA Offscreen] Created Object URL for task ${taskId} (${targetFilename})`);
+
+  try {
+    await chrome.runtime.sendMessage({
+      action: 'REGISTER_INTERNAL_URL',
+      url: objectUrl,
+      filename: targetFilename,
+      taskId
+    });
+  } catch (_) {}
 
   return { success: true, objectUrl };
 }
