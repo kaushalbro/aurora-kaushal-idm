@@ -255,7 +255,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "aurora-benchmark"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "async-stream",
  "aurora-core",
@@ -282,7 +282,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-cli"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "anyhow",
  "aurora-benchmark",
@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-core"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "async-trait",
  "bytes",
@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-desktop"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "aurora-benchmark",
  "aurora-core",
@@ -345,7 +345,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-gui"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "anyhow",
  "aurora-benchmark",
@@ -373,7 +373,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-history"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "aurora-core",
  "chrono",
@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-http"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "async-trait",
  "aurora-core",
@@ -406,7 +406,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-metrics"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "aurora-core",
  "serde",
@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-recovery"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "aurora-core",
  "chrono",
@@ -430,7 +430,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-scheduler"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "async-trait",
  "aurora-core",
@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-storage"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "async-trait",
  "aurora-core",
@@ -465,7 +465,7 @@ dependencies = [
 
 [[package]]
 name = "aurora-wasm"
-version = "0.3.1"
+version = "3.0.3"
 dependencies = [
  "aurora-core",
  "aurora-metrics",

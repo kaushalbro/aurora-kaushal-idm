@@ -3,9 +3,14 @@
  * Intercepts download clicks before other extensions or browser default handlers.
  */
 
-// Regex for direct downloadable file extensions
+// Regex for direct downloadable file extensions (including images, video, audio, archives, documents)
 // Rebuilt at runtime from user settings (options page) when available.
-const DEFAULT_EXTENSIONS = ['zip','rar','7z','tar','gz','bz2','xz','tgz','zst','lz4','iso','img','bin','exe','msi','dmg','pkg','deb','rpm','apk','aab','appimage','jar','whl','crx','wasm','mp4','mkv','avi','mov','wmv','flv','webm','3gp','mp3','flac','wav','aac','m4a','ogg','opus','pdf','doc','docx','xls','xlsx','ppt','pptx','epub','mobi','csv','sqlite','db','sql','vmdk','torrent'];
+const DEFAULT_EXTENSIONS = [
+  'jpg','jpeg','png','webp','gif','svg','bmp','ico','tiff','tif','avif','heic','heif','psd','raw',
+  'zip','rar','7z','tar','gz','bz2','xz','tgz','zst','lz4','iso','img','bin','exe','msi','dmg','pkg','deb','rpm','apk','aab','appimage','jar','whl','crx','wasm',
+  'mp4','mkv','avi','mov','wmv','flv','webm','3gp','mp3','flac','wav','aac','m4a','ogg','opus',
+  'pdf','doc','docx','xls','xlsx','ppt','pptx','epub','mobi','csv','sqlite','db','sql','vmdk','torrent','txt','json','xml'
+];
 let FILE_EXTENSIONS_REGEX = buildExtRegex(DEFAULT_EXTENSIONS);
 
 // Regex for dynamic download endpoints & query parameters

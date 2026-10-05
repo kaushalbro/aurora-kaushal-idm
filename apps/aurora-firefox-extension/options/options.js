@@ -14,10 +14,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   checkAutoCapture.checked = settings.autoCapture !== false;
   inputExtensions.value = (settings.interceptExtensions || [
+    'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp', 'ico', 'tiff', 'tif', 'avif', 'heic', 'heif',
     'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'zst', 'lz4', 'iso', 'img', 'bin',
     'exe', 'msi', 'dmg', 'pkg', 'deb', 'rpm', 'apk', 'aab', 'appimage', 'jar', 'whl', 'crx', 'wasm',
     'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mp3', 'flac', 'wav', 'aac', 'm4a', 'ogg', 'opus',
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'epub', 'mobi', 'csv', 'sqlite', 'db', 'sql', 'vmdk', 'torrent'
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'epub', 'mobi', 'csv', 'sqlite', 'db', 'sql', 'vmdk', 'torrent', 'txt', 'json', 'xml'
   ]).join(', ');
   selectDefaultConns.value = String(settings.connections || 8);
   selectDefaultScheduler.value = settings.schedulerType || 'aurora-ect';

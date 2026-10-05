@@ -457,5 +457,5 @@ pub fn verify_checksum(data: &[u8], expected_hex: &str, algorithm: &str) -> bool
 /// Returns the AURORA engine build version string.
 #[wasm_bindgen]
 pub fn aurora_version() -> String {
-    "AURORA Kaushal IDM v0.3.0 (WebAssembly Core)".to_string()
+    "AURORA Kaushal IDM v3.0.3 (WebAssembly Core)".to_string()
 }

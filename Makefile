@@ -1,6 +1,6 @@
 .PHONY: all build package extensions install-deb run clean help
 
-VERSION ?= 0.3.1
+VERSION ?= 3.0.3
 DEB_PACKAGE := dist/aurora-kaushal-idm_$(VERSION)_amd64.deb
 
 help:

@@ -81,33 +81,26 @@ export async function ensureOffscreenDocument() {
 }
 
 
-// MIME type to extension dictionary
-const MIME_EXTENSION_MAP = {
-  'video/mp4': 'mp4',
-  'video/webm': 'webm',
-  'video/x-matroska': 'mkv',
-  'video/quicktime': 'mov',
-  'video/x-msvideo': 'avi',
-  'video/3gpp': '3gp',
-  'audio/mpeg': 'mp3',
-  'audio/mp4': 'm4a',
-  'audio/ogg': 'ogg',
-  'audio/wav': 'wav',
-  'audio/flac': 'flac',
-  'application/zip': 'zip',
-  'application/x-zip-compressed': 'zip',
-  'application/x-rar-compressed': 'rar',
-  'application/x-7z-compressed': '7z',
-  'application/x-tar': 'tar',
-  'application/gzip': 'gz',
-  'application/x-bzip2': 'bz2',
-  'application/x-xz': 'xz',
-  'application/x-iso9660-image': 'iso',
-  'application/pdf': 'pdf',
-  'application/octet-stream': 'bin',
-  'application/x-msdownload': 'exe',
-  'application/vnd.android.package-archive': 'apk'
-};
+import mimeDb from './mime-db.js';
+
+export const MIME_EXTENSION_MAP = Object.fromEntries(
+  Object.entries(mimeDb)
+    .filter(([, info]) => info.extensions?.length)
+    .map(([mime, info]) => [
+      mime,
+      info.extensions,
+    ])
+);
+
+export function getMimeExtension(mimeType) {
+  if (!mimeType) return null;
+  const clean = mimeType.split(';')[0].trim().toLowerCase();
+  const extList = MIME_EXTENSION_MAP[clean];
+  if (Array.isArray(extList) && extList.length > 0) {
+    return extList[0];
+  }
+  return null;
+}
 
 export class WasmDownloadTask {
   constructor(id, url, filename, options = {}) {
@@ -280,14 +273,20 @@ export class WasmDownloadTask {
         } catch (_) {}
       }
 
-      // 3. Infer extension from MIME type if missing
-      if (this.filename && !this.filename.includes('.') && this.mimeType && MIME_EXTENSION_MAP[this.mimeType]) {
-        this.filename += '.' + MIME_EXTENSION_MAP[this.mimeType];
+      // 3. Infer or correct extension from MIME type if missing or if current extension is a backend script (e.g. .php, .aspx, .jsp, .cgi, .do)
+      const mimeExt = getMimeExtension(this.mimeType);
+      const isBackendScript = /\.(php|aspx|asp|jsp|cgi|do|action|axd)(?:[?#]|$)/i.test(this.filename || '');
+      if (mimeExt) {
+        if (isBackendScript && this.filename) {
+          this.filename = this.filename.replace(/\.(php|aspx|asp|jsp|cgi|do|action|axd)$/i, '.' + mimeExt);
+        } else if (this.filename && !this.filename.includes('.')) {
+          this.filename += '.' + mimeExt;
+        }
       }
 
       // 4. Default fallback
       if (!this.filename || this.filename.trim() === '') {
-        const ext = (this.mimeType && MIME_EXTENSION_MAP[this.mimeType]) ? MIME_EXTENSION_MAP[this.mimeType] : 'bin';
+        const ext = mimeExt || 'bin';
         this.filename = `download_${Date.now()}.${ext}`;
       }
 
