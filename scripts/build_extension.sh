@@ -22,6 +22,16 @@ echo "============================================================"
 echo "[1/5] Generating extension icons..."
 python3 "$SCRIPT_DIR/generate_icons.py"
 
+# Sync manifest.json version with centralized $VERSION
+python3 -c "
+import json
+with open('$EXT_DIR/manifest.json', 'r') as f:
+    d = json.load(f)
+d['version'] = '${VERSION}'
+with open('$EXT_DIR/manifest.json', 'w') as f:
+    json.dump(d, f, indent=2)
+"
+
 # Step 2: Compile Rust WASM crate with independent target directory
 echo "[2/5] Compiling Rust core to WebAssembly (wasm32-unknown-unknown)..."
 cargo build --package aurora-wasm --target wasm32-unknown-unknown --release --target-dir "$ROOT_DIR/target/wasm-target"

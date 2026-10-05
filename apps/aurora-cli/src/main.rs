@@ -17,7 +17,7 @@ use url::Url;
 #[derive(Parser)]
 #[command(name = "aurora")]
 #[command(author = "AURORA Development Team")]
-#[command(version = "0.3.0")]
+#[command(version)]
 #[command(about = "High-Performance Research Download Manager in pure Rust", long_about = None)]
 struct Cli {
     #[command(subcommand)]

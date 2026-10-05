@@ -7,7 +7,7 @@
   Accelerate file downloads with adaptive multi-connection streams, dynamic chunk splitting, and live visual progress tracking.
 * **Category**: Productivity / Developer Tools
 * **Language**: English
-* **Version**: 0.1.0
+* **Version**: 0.3.1
 
 ---
 
@@ -22,26 +22,31 @@ AURORA Kaushal IDM is a high-performance, in-browser download manager engineered
 * 🖱️ **One-Click Context Menu**: Right-click on any downloadable link, image, audio, or video and select "Download with AURORA".
 * ⚙️ **Automatic Download Capture**: Intercepts large archive, media, and binary files and replaces slow single-stream browser downloads.
 * 🔒 **Built-in Hash Verification**: Verifies SHA-256 and BLAKE3 file checksums before saving to guarantee file integrity.
-* 🛡️ **Zero Native Installation**: Runs 100% inside your browser with WebAssembly — no desktop software, background daemons, or extra setup required.
+* 🛡️ **Zero Native Installation Required**: Runs 100% inside your browser with pure WebAssembly.
 
 ---
 
-## 3. Permissions Justifications
+## 3. Permissions Justifications (Privacy Practices Tab)
 
-| Permission | Justification |
+Enter the following justifications in the **Privacy practices** tab of the Chrome Web Store Developer Dashboard:
+
+| Permission | Exact Justification (Copy & Paste) |
 | :--- | :--- |
-| `downloads` | Required to register completed downloads into the browser's download manager and trigger file saving to the user's download directory. |
-| `storage` | Required to save user preferences, such as default connection count, auto-capture toggles, and file extension filters. |
-| `contextMenus` | Required to provide the right-click "Download with AURORA" context menu option on links, images, and media. |
-| `alarms` | Required to maintain background service worker timers and periodically refresh active download metrics. |
-| `notifications` | Required to notify the user when a large file download has finished or if an integrity checksum mismatch occurs. |
-| `host_permissions` (`<all_urls>`) | Required to send parallel HTTP Range requests to the remote file servers hosting the files the user chooses to download. |
+| `activeTab` | `Required to detect downloadable media, document links, and capture the current page URL when the user explicitly clicks the extension popup or initiates a download from the active tab.` |
+| `downloads` | `Required to save completed multi-stream accelerated files directly into the user's download directory and register them in the browser download history.` |
+| `storage` | `Required to persist user preferences locally, including connection concurrency, dynamic segment size, and auto-capture file filters.` |
+| `contextMenus` | `Required to provide the right-click "Download with AURORA" context menu option on links, images, video streams, and audio elements.` |
+| `alarms` | `Required to schedule periodic background metric synchronization, download speed calculations, and connection health checks.` |
+| `notifications` | `Required to notify the user when a large file download has successfully finished or if an integrity checksum mismatch is detected.` |
+| `offscreen` | `Required to run WebAssembly (WASM) multithreaded chunking and binary stream assembly within an isolated background offscreen document in Manifest V3.` |
+| `host_permissions` (`<all_urls>`) | `Required to send parallel HTTP Range requests to the remote file servers hosting the files the user chooses to download.` |
 
 ---
 
 ## 4. Privacy & Data Use Disclosure
 
-* **Data Collection**: None. AURORA does not collect, log, or transmit any browsing history, personal data, or analytics to external servers.
+* **Single Purpose Description**: High-performance multi-stream download acceleration and management using WebAssembly.
+* **Data Collection**: No personal data, browsing history, or user data is collected, logged, or transferred to external servers.
 * **Network Activity**: All network requests are made directly between your browser and the remote server hosting the file you chose to download.
 * **Storage**: Preferences and temporary download state are stored strictly locally on your device via `chrome.storage.local`.
 
@@ -52,8 +57,8 @@ AURORA Kaushal IDM is a high-performance, in-browser download manager engineered
 To build the latest release package ready for Chrome Web Store upload:
 ```bash
 # Run the automated build script:
-./scripts/build_extension.sh
+bash scripts/build_extension.sh
 
-# The ready-to-upload zip will be created at:
-# dist/aurora-extension-v0.1.0.zip
+# The ready-to-upload zip is created at:
+# dist/aurora-chrome-v0.3.1.zip (or dist/aurora-extension-v0.3.1.zip)
 ```
