@@ -207,43 +207,91 @@ rehydrateTasks();
 
 /**
  * Universal Download Interception:
- * Whenever browser begins ANY download, AURORA intercepts it and accelerates with WASM.
+ * Whenever browser begins ANY download, AURORA intercepts it and accelerates with WASM or Desktop Engine.
  */
-chrome.downloads.onCreated.addListener(async (downloadItem) => {
-  const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
-  if (settings.autoCapture === false) return;
+async function handleInterceptedDownload(downloadItem) {
+  // 1. Never intercept downloads created by AURORA itself
+  if (downloadItem.byExtensionId === chrome.runtime.id) {
+    return false;
+  }
+  if (downloadItem.byExtensionName && (downloadItem.byExtensionName.includes('Aurora') || downloadItem.byExtensionName.includes('AURORA'))) {
+    return false;
+  }
 
   const url = downloadItem.finalUrl || downloadItem.url;
-  if (!url) return;
+  if (!url) return false;
 
   // Ignore internal blob/data URLs or downloads triggered by AURORA itself
-  if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome:') || url.startsWith('moz-extension:') || internalDownloadUrls.has(url)) {
-    return;
+  if (url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome:') || url.startsWith('chrome-extension:') || url.startsWith('moz-extension:') || internalDownloadUrls.has(url)) {
+    return false;
   }
+
+  const { settings = DEFAULT_SETTINGS } = await chrome.storage.local.get('settings');
+  if (settings.autoCapture === false) return false;
 
   // Check MIME type: don't intercept accidental HTML "Save Page As" unless requested
   const mime = (downloadItem.mime || '').toLowerCase();
   if (mime === 'text/html' && !url.toLowerCase().includes('download') && !downloadItem.filename.includes('.')) {
-    return;
+    return false;
   }
 
   console.log(`[AURORA] ⚡ Intercepted download: ${url} (MIME: ${mime}, Filename: ${downloadItem.filename})`);
 
-  // 1. Cancel browser's slow native download immediately
+  // Cancel browser's slow native download immediately
   try {
     await chrome.downloads.cancel(downloadItem.id);
-    await chrome.downloads.erase({ id: downloadItem.id });
   } catch (e) {
     console.warn('[AURORA] Could not cancel native download:', e);
   }
+  try {
+    await chrome.downloads.erase({ id: downloadItem.id });
+  } catch (_) {}
 
-  // 2. Extract suggested filename if browser already knew it
+  // Extract suggested filename if browser already knew it
   const suggestedFilename = downloadItem.filename ? downloadItem.filename.split(/[\/\\]/).pop() : null;
 
-  // 3. Hand over to AURORA's high-speed WebAssembly Multi-Stream Downloader
-  await createDownloadTask(url, suggestedFilename, settings);
+  // Check if Desktop App is active and auto-routing is preferred
+  let routedToDesktop = false;
+  try {
+    const bridgeRes = await fetch('http://127.0.0.1:28282/api/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url,
+        filename: suggestedFilename,
+        connections: settings.connections || 8
+      })
+    });
+    if (bridgeRes.ok) {
+      routedToDesktop = true;
+      console.log(`[AURORA] Successfully routed download to Desktop Engine: ${url}`);
+    }
+  } catch (_) {
+    // Desktop not running, proceed with WASM engine
+  }
+
+  if (!routedToDesktop) {
+    // Hand over to AURORA's high-speed WebAssembly Multi-Stream Downloader
+    await createDownloadTask(url, suggestedFilename, settings);
+  }
+
   notifyActiveTabDownload(suggestedFilename || url);
+  return true;
+}
+
+chrome.downloads.onCreated.addListener(async (downloadItem) => {
+  await handleInterceptedDownload(downloadItem);
 });
+
+if (chrome.downloads.onDeterminingFilename) {
+  chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+    if (downloadItem.byExtensionId === chrome.runtime.id) {
+      suggest();
+      return;
+    }
+    suggest();
+  });
+}
 
 async function notifyActiveTabDownload(filename) {
   try {

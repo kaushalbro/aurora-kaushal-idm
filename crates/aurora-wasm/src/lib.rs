@@ -112,11 +112,7 @@ impl AuroraWasmEngine {
 
         let scheduler: Box<dyn Scheduler> = match sched_type {
             SchedulerType::SingleStream => Box::new(SingleStreamScheduler::new()),
-            SchedulerType::Fixed => Box::new(FixedSegmentScheduler::new(conns)),
-            SchedulerType::LargestSegment => {
-                Box::new(LargestSegmentScheduler::new(config.min_segment_size))
-            }
-            SchedulerType::AuroraEct => Box::new(AuroraEctScheduler::new(&config)),
+            _ => Box::new(FixedSegmentScheduler::new(conns)),
         };
 
         let mut segments = Vec::new();

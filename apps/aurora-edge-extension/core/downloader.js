@@ -182,6 +182,7 @@ export class WasmDownloadTask {
         res = await fetch(this.url, {
           method: 'HEAD',
           redirect: 'follow',
+          credentials: 'include',
           signal: withProbeTimeout(this.abortController.signal)
         });
       } catch (_) {}
@@ -193,6 +194,7 @@ export class WasmDownloadTask {
             method: 'GET',
             headers: { 'Range': 'bytes=0-0' },
             redirect: 'follow',
+            credentials: 'include',
             signal: this.abortController.signal
           });
         } catch (e) {
@@ -200,6 +202,7 @@ export class WasmDownloadTask {
           res = await fetch(this.url, {
             method: 'GET',
             redirect: 'follow',
+            credentials: 'include',
             signal: this.abortController.signal
           });
         }
@@ -431,9 +434,9 @@ export class WasmDownloadTask {
       while (!this.isPaused && !this.abortController.signal.aborted) {
         const action = this.wasmEngine?.get_next_action(this.activeWorkers);
 
-        // Browser fetch streams cannot safely be resized after dispatch. Use the
-        // initial non-overlapping partitions; native ECT handles live splitting.
-        if (!action || action.action_type === 'do_nothing') break;
+        // In browser WASM, each worker handles its assigned non-overlapping initial partition.
+        // We only process 'start_segment' to avoid duplicate/overlapping in-flight range fetches.
+        if (!action || action.action_type !== 'start_segment') break;
 
         const start = Number(action.start);
         const end = Number(action.end);
@@ -466,6 +469,7 @@ export class WasmDownloadTask {
         res = await fetch(this.finalUrl, {
           method: 'GET',
           headers: { 'Range': rangeHeader, ...(this.etag && !this.etag.startsWith('W/') ? { 'If-Range': this.etag } : {}) },
+          credentials: 'include',
           signal: this.abortController.signal
         });
 
@@ -582,7 +586,10 @@ export class WasmDownloadTask {
     this.resetSpeed();
     this.activeWorkers = 1;
     this.status = 'Downloading';
-    const res = await fetch(this.finalUrl, { signal: this.abortController.signal });
+    const res = await fetch(this.finalUrl, {
+      credentials: 'include',
+      signal: this.abortController.signal
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
     const encoded = res.headers.get('content-encoding');

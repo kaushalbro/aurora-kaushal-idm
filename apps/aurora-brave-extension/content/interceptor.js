@@ -8,6 +8,9 @@
 const DEFAULT_EXTENSIONS = ['zip','rar','7z','tar','gz','bz2','xz','tgz','zst','lz4','iso','img','bin','exe','msi','dmg','pkg','deb','rpm','apk','aab','appimage','jar','whl','crx','wasm','mp4','mkv','avi','mov','wmv','flv','webm','3gp','mp3','flac','wav','aac','m4a','ogg','opus','pdf','doc','docx','xls','xlsx','ppt','pptx','epub','mobi','csv','sqlite','db','sql','vmdk','torrent'];
 let FILE_EXTENSIONS_REGEX = buildExtRegex(DEFAULT_EXTENSIONS);
 
+// Regex for dynamic download endpoints & query parameters
+const DYNAMIC_DOWNLOAD_REGEX = /(?:[?&/](?:download|export|attachment|invoice|report|stream|get_file|get_avoir|fetch_file)[^/]*|[?&](?:dl|export|format|file)=(?:1|true|download|pdf|zip|bin|csv))/i;
+
 function buildExtRegex(list) {
   const esc = (list || []).map(e => String(e).trim().toLowerCase().replace(/^\./, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean);
   if (!esc.length) return /\.(zip|rar)(?:[?#]|$)/i;
@@ -38,7 +41,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 /**
  * Capture-phase click listener
- * Intercepts direct file links and <a download> clicks with Shadow DOM & modifier key support
+ * Intercepts direct file links, dynamic download scripts, and <a download> clicks
  */
 window.addEventListener('click', (event) => {
   if (!autoCaptureEnabled) return;
@@ -48,24 +51,27 @@ window.addEventListener('click', (event) => {
     return;
   }
 
-  // Find nearest anchor, supporting Shadow DOM via event.composedPath()
+  // Find nearest anchor or downloadable button, supporting Shadow DOM via event.composedPath()
   let anchor = null;
   if (typeof event.composedPath === 'function') {
     const path = event.composedPath();
     for (const el of path) {
-      if (el && el.tagName === 'A' && el.href) {
+      if (el && (el.tagName === 'A' || el.hasAttribute?.('data-download-url')) && (el.href || el.getAttribute?.('data-download-url'))) {
         anchor = el;
         break;
       }
     }
   }
   if (!anchor && event.target && typeof event.target.closest === 'function') {
-    anchor = event.target.closest('a');
+    anchor = event.target.closest('a') || event.target.closest('[data-download-url]');
   }
 
-  if (!anchor || !anchor.href) return;
+  if (!anchor) return;
 
-  const href = anchor.href.trim();
+  const rawHref = anchor.href || anchor.getAttribute('data-download-url') || anchor.getAttribute('data-href');
+  if (!rawHref || typeof rawHref !== 'string') return;
+
+  const href = rawHref.trim();
   if (!href || href.startsWith('javascript:') || href.startsWith('#') || href.startsWith('blob:') || href.startsWith('data:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
     return;
   }
@@ -73,10 +79,12 @@ window.addEventListener('click', (event) => {
   // Intercept if:
   // 1. Has explicit <a download> attribute
   // 2. Links to a file with a downloadable file extension
+  // 3. Matches dynamic download URL patterns (e.g. get_avoir_pdf.php, download.php)
   const hasDownloadAttr = anchor.hasAttribute('download');
   const isDirectFileLink = FILE_EXTENSIONS_REGEX.test(href);
+  const isDynamicDownload = DYNAMIC_DOWNLOAD_REGEX.test(href);
 
-  if (hasDownloadAttr || isDirectFileLink) {
+  if (hasDownloadAttr || isDirectFileLink || isDynamicDownload) {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
@@ -101,9 +109,15 @@ window.addEventListener('click', (event) => {
 function extractFilename(urlStr) {
   try {
     const url = new URL(urlStr, window.location.href);
+    // Check query params for explicit filename hints
+    for (const param of ['filename', 'file', 'name', 'title', 'f']) {
+      const val = url.searchParams.get(param);
+      if (val && val.includes('.')) return decodeURIComponent(val.trim());
+    }
     const segs = url.pathname.split('/').filter(Boolean);
     if (segs.length > 0) {
-      const name = decodeURIComponent(segs[segs.length - 1]);
+      const name = decodeURIComponent(segs[segs.length - 1].split('?')[0].split('#')[0]);
+      if (name.includes('.')) return name;
       return name;
     }
   } catch (_) {}
